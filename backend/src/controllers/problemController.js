@@ -58,6 +58,10 @@ async function createProblem(req, res) {
     let maxResolutionDays = 7;
     let isIrrelevant = false;
     let relevanceFlags = null;
+    let isSachivalayamDispatch = false;
+    let sachivalayamOffice = null;
+    let targetSecretary = null;
+    let sachivalayamReason = null;
 
     if (relevanceAudit.isIrrelevant) {
       isIrrelevant = true;
@@ -78,6 +82,10 @@ async function createProblem(req, res) {
       urgency = aiClassification.urgency;
       level = aiClassification.level;
       maxResolutionDays = aiClassification.maxResolutionDays;
+      isSachivalayamDispatch = Boolean(aiClassification.isSachivalayamDispatch);
+      sachivalayamOffice = aiClassification.sachivalayamOffice || (isSachivalayamDispatch ? `${village || mandal || 'Local'} Grama / Ward Sachivalayam` : null);
+      targetSecretary = aiClassification.targetSecretary;
+      sachivalayamReason = aiClassification.sachivalayamReason;
     }
 
     // 4. Duplicate Detection Check
@@ -121,7 +129,11 @@ async function createProblem(req, res) {
       maxResolutionDays,
       isIrrelevant,
       relevanceFlags,
-      duplicateOf: duplicateCheck.isDuplicate ? duplicateCheck.matchedProblemId : null
+      duplicateOf: duplicateCheck.isDuplicate ? duplicateCheck.matchedProblemId : null,
+      isSachivalayamDispatch,
+      sachivalayamOffice,
+      targetSecretary,
+      sachivalayamReason
     });
 
     return res.status(201).json({
@@ -131,7 +143,11 @@ async function createProblem(req, res) {
       flagReason: relevanceFlags?.flagReason || null,
       duplicateDetected: duplicateCheck.isDuplicate,
       matchedDuplicateId: duplicateCheck.matchedProblemId,
-      crossStateSimilarProblems: crossStateMatches
+      crossStateSimilarProblems: crossStateMatches,
+      isSachivalayamDispatch,
+      sachivalayamOffice,
+      targetSecretary,
+      sachivalayamReason
     });
   } catch (err) {
     console.error("Error creating problem:", err);
@@ -307,6 +323,37 @@ async function processVoiceIntake(req, res) {
   }
 }
 
+// PATCH /api/problems/:id/sachivalayam-dispatch
+function dispatchToSachivalayam(req, res) {
+  try {
+    const { id } = req.params;
+    const { office, secretary, remarks } = req.body || {};
+
+    const token = `SCH-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const updated = db.dispatchToSachivalayam(id, {
+      office,
+      secretary,
+      remarks,
+      dispatchToken: token,
+      dispatchedAt: new Date().toISOString()
+    });
+
+    if (!updated) {
+      return res.status(404).json({ error: "Problem not found." });
+    }
+
+    return res.json({
+      success: true,
+      message: `Successfully dispatched to ${updated.sachivalayamOffice || 'Ward Sachivalayam'}.`,
+      problem: updated,
+      dispatchToken: token
+    });
+  } catch (err) {
+    console.error("Error dispatching to Sachivalayam:", err);
+    return res.status(500).json({ error: "Failed to dispatch grievance to Sachivalayam." });
+  }
+}
+
 module.exports = {
   createProblem,
   getProblems,
@@ -315,6 +362,8 @@ module.exports = {
   updateProblemStatus,
   deleteProblem,
   batchDeleteProblems,
-  processVoiceIntake
+  processVoiceIntake,
+  dispatchToSachivalayam
 };
+
 

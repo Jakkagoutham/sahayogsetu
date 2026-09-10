@@ -282,6 +282,47 @@ export default function SubmitProblem({ onProblemCreated, onNavigateBoard }) {
             </p>
           </div>
 
+          {/* Sachivalayam Direct Dispatch Notice */}
+          {(submissionResult.isSachivalayamDispatch || submissionResult.problem?.isSachivalayamDispatch) && (
+            <div style={{
+              background: 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)',
+              border: '1.5px solid #fdba74',
+              borderRadius: '8px',
+              padding: '16px 20px',
+              marginBottom: '24px',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '12px'
+            }}>
+              <div style={{
+                background: '#ea580c',
+                color: '#ffffff',
+                borderRadius: '50%',
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                marginTop: '2px',
+                fontSize: '1rem'
+              }}>
+                🏛️
+              </div>
+              <div>
+                <div style={{ fontWeight: '800', color: '#9a3412', fontSize: '0.98rem' }}>
+                  Routed to Grama / Ward Sachivalayam Dispatch Desk
+                </div>
+                <p style={{ margin: '4px 0 6px 0', fontSize: '0.84rem', color: '#c2410c', lineHeight: '1.5' }}>
+                  <strong>Autonomous Triage Notice:</strong> Groq AI identified this as a hyper-local doorstep maintenance or localized nuisance issue. Rather than requiring long-term university research, this has been dispatched directly to the <strong>Government Command Center's Sachivalayam Desk</strong> for immediate ground inspection by your local Ward / Panchayat Secretary.
+                </p>
+                <div style={{ fontSize: '0.78rem', color: '#9a3412', fontWeight: '600' }}>
+                  Designated Office: {submissionResult.sachivalayamOffice || submissionResult.problem?.sachivalayamOffice || "Local Ward Sachivalayam"} • {submissionResult.targetSecretary || submissionResult.problem?.targetSecretary || "Ward Sanitation Secretary"}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* AI Classification Summary */}
           <div style={{
             display: 'grid',

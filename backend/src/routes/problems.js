@@ -28,6 +28,9 @@ router.post('/:id/resolve', upload.single('resolutionPhoto'), problemController.
 // Update status / grant pilot sanction
 router.patch('/:id/status', problemController.updateProblemStatus);
 
+// Grama / Ward Sachivalayam e-dispatch
+router.patch('/:id/sachivalayam-dispatch', problemController.dispatchToSachivalayam);
+
 // Delete single problem (Authority moderation)
 router.delete('/:id', problemController.deleteProblem);
 

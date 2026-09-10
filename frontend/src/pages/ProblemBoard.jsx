@@ -488,6 +488,19 @@ export default function ProblemBoard({ problems, onSelectProblem, loading }) {
                     }}>
                       {prob.problemCode || prob.id}
                     </span>
+                    {prob.isSachivalayamDispatch && (
+                      <span style={{
+                        background: '#ea580c',
+                        color: '#ffffff',
+                        padding: '2px 7px',
+                        borderRadius: '4px',
+                        fontSize: '0.7rem',
+                        fontWeight: '800',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                      }}>
+                        🏛️ Ward Sachivalayam
+                      </span>
+                    )}
                   </div>
 
                   {/* Status / Urgency Badge */}

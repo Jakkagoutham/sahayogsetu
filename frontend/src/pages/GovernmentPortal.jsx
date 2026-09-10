@@ -3,7 +3,7 @@ import {
   ShieldAlert, Award, Clock, AlertTriangle, Building2, 
   MapPin, CheckCircle, Send, FileText, ArrowUpRight, BarChart3, 
   Users, ChevronLeft, ChevronRight, Layers, LayoutGrid, ArrowLeft, 
-  Trash2, X, AlertCircle, CheckSquare, Square 
+  Trash2, X, AlertCircle, CheckSquare, Square, Home, Check, ExternalLink 
 } from 'lucide-react';
 import SectorFilterBar from '../components/SectorFilterBar';
 
@@ -14,7 +14,7 @@ export default function GovernmentPortal({
   onProblemUpdated, 
   onBack 
 }) {
-  const [activeTab, setActiveTab] = useState('triage'); // 'triage' | 'hubs' | 'analytics'
+  const [activeTab, setActiveTab] = useState('triage'); // 'triage' | 'sachivalayam' | 'hubs' | 'analytics'
   const [sanctionedIds, setSanctionedIds] = useState({});
 
   // Batch and Individual Deletion State
@@ -25,6 +25,16 @@ export default function GovernmentPortal({
   const [isIrrelevantDrawerOpen, setIsIrrelevantDrawerOpen] = useState(false);
   const [selectedIrrelevantIds, setSelectedIrrelevantIds] = useState(new Set());
   const [notificationMsg, setNotificationMsg] = useState('');
+
+  // Sachivalayam Desk State
+  const [sachivalayamFilterStatus, setSachivalayamFilterStatus] = useState('All'); // 'All' | 'Pending Dispatch' | 'Dispatched'
+  const [sachivalayamSearch, setSachivalayamSearch] = useState('');
+  const [dispatchModalOpen, setDispatchModalOpen] = useState(false);
+  const [problemToDispatch, setProblemToDispatch] = useState(null);
+  const [dispatchOfficeInput, setDispatchOfficeInput] = useState('');
+  const [dispatchSecretaryInput, setDispatchSecretaryInput] = useState('');
+  const [dispatchRemarksInput, setDispatchRemarksInput] = useState('');
+  const [isDispatching, setIsDispatching] = useState(false);
 
   // Filter & Search states (Matching user's screenshot)
   const [search, setSearch] = useState('');
@@ -37,6 +47,89 @@ export default function GovernmentPortal({
   // Pagination states to handle large scale (lakhs of problems)
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(6);
+
+  // Helper to detect hyper-local/single-family/nuisance grievances
+  const isHyperLocalProblem = (p) => {
+    if (p.isSachivalayamDispatch) return true;
+    const text = `${p.title || ''} ${p.description || ''}`.toLowerCase();
+    return /in\s*front\s*of\s*(my|our)?\s*(home|house|gate|door)|stuck\s*drainage|drainage\s*(is)?\s*stuck|loud\s*(disturbance|noise|speaker)|(church|temple|mosque|function\s*hall).*loud|personal\s*(problem|issue)|single\s*family/i.test(text);
+  };
+
+  const allSachivalayamProblems = useMemo(() => {
+    return problems.filter(isHyperLocalProblem);
+  }, [problems]);
+
+  const pendingSachivalayamCount = useMemo(() => {
+    return allSachivalayamProblems.filter(p => !p.dispatchStatus || p.dispatchStatus === 'Pending Dispatch').length;
+  }, [allSachivalayamProblems]);
+
+  const filteredSachivalayamProblems = useMemo(() => {
+    return allSachivalayamProblems.filter(p => {
+      const isDispatched = p.dispatchStatus === 'Dispatched';
+      if (sachivalayamFilterStatus === 'Pending Dispatch' && isDispatched) return false;
+      if (sachivalayamFilterStatus === 'Dispatched' && !isDispatched) return false;
+
+      if (sachivalayamSearch) {
+        const q = sachivalayamSearch.trim().toLowerCase();
+        const title = (p.title || '').toLowerCase();
+        const desc = (p.description || '').toLowerCase();
+        const vill = (p.location?.village || '').toLowerCase();
+        const mand = (p.location?.mandal || '').toLowerCase();
+        const dist = (p.location?.district || '').toLowerCase();
+        const area = (p.location?.areaName || '').toLowerCase();
+        const off = (p.sachivalayamOffice || '').toLowerCase();
+        const sec = (p.targetSecretary || '').toLowerCase();
+        const tok = (p.dispatchToken || '').toLowerCase();
+        return title.includes(q) || desc.includes(q) || vill.includes(q) || mand.includes(q) || dist.includes(q) || area.includes(q) || off.includes(q) || sec.includes(q) || tok.includes(q);
+      }
+      return true;
+    });
+  }, [allSachivalayamProblems, sachivalayamFilterStatus, sachivalayamSearch]);
+
+  const handleOpenDispatchModal = (prob) => {
+    setProblemToDispatch(prob);
+    const defaultOffice = prob.sachivalayamOffice || `${prob.location?.village || prob.location?.mandal || 'Local'} Grama / Ward Sachivalayam`;
+    const defaultSecretary = prob.targetSecretary || (
+      `${prob.title || ''} ${prob.description || ''}`.toLowerCase().includes('noise') 
+        ? 'Ward Welfare & Police Liaison' 
+        : 'Ward Sanitation & Environment Secretary'
+    );
+    setDispatchOfficeInput(defaultOffice);
+    setDispatchSecretaryInput(defaultSecretary);
+    setDispatchRemarksInput('Dispatched by District Authority for immediate ward inspection & desilting/action.');
+    setDispatchModalOpen(true);
+  };
+
+  const handleConfirmDispatch = async () => {
+    if (!problemToDispatch) return;
+    setIsDispatching(true);
+    try {
+      const res = await fetch(`/api/problems/${problemToDispatch.id}/sachivalayam-dispatch`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          office: dispatchOfficeInput,
+          secretary: dispatchSecretaryInput,
+          remarks: dispatchRemarksInput
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to dispatch');
+
+      setNotificationMsg(`✅ Officially Dispatched to ${data.problem.sachivalayamOffice || 'Ward Sachivalayam'}! Token: ${data.dispatchToken}`);
+      if (onProblemUpdated) {
+        onProblemUpdated(data.problem);
+      }
+      setDispatchModalOpen(false);
+      setProblemToDispatch(null);
+      setTimeout(() => setNotificationMsg(''), 6000);
+    } catch (err) {
+      console.error('Dispatch error:', err);
+      alert(err.message || 'Failed to dispatch.');
+    } finally {
+      setIsDispatching(false);
+    }
+  };
 
   // National KPIs
   const totalProblems = problems.length;
@@ -481,6 +574,35 @@ export default function GovernmentPortal({
           </button>
 
           <button
+            onClick={() => { setActiveTab('sachivalayam'); setCurrentPage(1); }}
+            className={activeTab === 'sachivalayam' ? 'btn-primary' : 'btn-secondary'}
+            style={{ 
+              padding: '7px 14px', 
+              fontSize: '0.8rem', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '6px',
+              border: activeTab === 'sachivalayam' ? '1px solid #ea580c' : '1px solid rgba(234, 88, 12, 0.4)'
+            }}
+          >
+            <Home size={15} color={activeTab === 'sachivalayam' ? '#ffffff' : '#fb923c'} />
+            <span>Ward / Grama Sachivalayam Desk ({allSachivalayamProblems.length})</span>
+            {pendingSachivalayamCount > 0 && (
+              <span style={{
+                background: '#ea580c',
+                color: '#ffffff',
+                fontSize: '0.68rem',
+                fontWeight: '800',
+                padding: '1px 6px',
+                borderRadius: '10px',
+                marginLeft: '3px'
+              }}>
+                {pendingSachivalayamCount} Pending
+              </span>
+            )}
+          </button>
+
+          <button
             onClick={() => setActiveTab('hubs')}
             className={activeTab === 'hubs' ? 'btn-primary' : 'btn-secondary'}
             style={{ padding: '7px 14px', fontSize: '0.8rem' }}
@@ -680,6 +802,19 @@ export default function GovernmentPortal({
                                   ⚠️ AI FLAGGED: IRRELEVANT REPORT
                                 </span>
                               )}
+                              {isHyperLocalProblem(prob) && (
+                                <span style={{
+                                  background: 'rgba(234, 88, 12, 0.25)',
+                                  color: '#fb923c',
+                                  border: '1px solid rgba(234, 88, 12, 0.5)',
+                                  padding: '2px 8px',
+                                  borderRadius: '4px',
+                                  fontSize: '0.7rem',
+                                  fontWeight: '800'
+                                }}>
+                                  🏠 WARD SACHIVALAYAM TRACK {prob.dispatchStatus === 'Dispatched' ? `(TOKEN: ${prob.dispatchToken})` : '(PENDING DISPATCH)'}
+                                </span>
+                              )}
                             </div>
 
                             <h3 
@@ -790,6 +925,48 @@ export default function GovernmentPortal({
                               )
                             )}
 
+                            {/* Hyper-Local Sachivalayam dispatch action */}
+                            {isHyperLocalProblem(prob) && (
+                              prob.dispatchStatus === 'Dispatched' ? (
+                                <div style={{
+                                  background: 'rgba(16, 185, 129, 0.15)',
+                                  border: '1px solid rgba(16, 185, 129, 0.4)',
+                                  color: '#4ade80',
+                                  padding: '5px 10px',
+                                  borderRadius: '6px',
+                                  fontSize: '0.72rem',
+                                  fontWeight: '700',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px'
+                                }}>
+                                  <CheckCircle size={12} />
+                                  <span>Dispatched ({prob.dispatchToken})</span>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => handleOpenDispatchModal(prob)}
+                                  style={{
+                                    fontSize: '0.74rem',
+                                    padding: '5px 12px',
+                                    background: 'linear-gradient(135deg, #ea580c 0%, #c2410c 100%)',
+                                    color: '#ffffff',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    fontWeight: '700',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '5px'
+                                  }}
+                                  title="Forward to Grama / Ward Sachivalayam"
+                                >
+                                  <Send size={12} />
+                                  <span>Forward to Sachivalayam</span>
+                                </button>
+                              )
+                            )}
+
                             {/* Individual Delete Problem button (Requirement 4) */}
                             <button
                               onClick={() => setProblemToDeleteSingle(prob)}
@@ -889,6 +1066,381 @@ export default function GovernmentPortal({
                   <ChevronRight size={14} />
                 </button>
               </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Sub-Tab: Ward / Grama Sachivalayam Dispatch Desk */}
+      {activeTab === 'sachivalayam' && (
+        <div>
+          {/* Header Card */}
+          <div className="glass-card" style={{
+            padding: '24px',
+            marginBottom: '20px',
+            background: 'linear-gradient(135deg, rgba(234, 88, 12, 0.08) 0%, rgba(15, 23, 42, 0.95) 100%)',
+            border: '1.5px solid rgba(234, 88, 12, 0.35)',
+            borderRadius: '12px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
+                <div style={{
+                  width: '46px',
+                  height: '46px',
+                  borderRadius: '12px',
+                  background: 'linear-gradient(135deg, #ea580c 0%, #c2410c 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 4px 14px rgba(234, 88, 12, 0.35)',
+                  flexShrink: 0
+                }}>
+                  <Home size={24} color="#ffffff" />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <span style={{
+                      fontSize: '0.68rem',
+                      fontWeight: '800',
+                      background: 'rgba(234, 88, 12, 0.25)',
+                      color: '#fb923c',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      border: '1px solid rgba(234, 88, 12, 0.4)'
+                    }}>
+                      WARD & GRAMA SECRETARIAT DESK
+                    </span>
+                    <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                      Grassroots Administrative Municipal Dispatch
+                    </span>
+                  </div>
+                  <h2 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#f8fafc', marginTop: '4px', marginBottom: '4px' }}>
+                    Hyper-Local & Household Grievance Dispatch Center
+                  </h2>
+                  <p style={{ color: '#cbd5e1', fontSize: '0.84rem', maxWidth: '780px', lineHeight: '1.5', margin: 0 }}>
+                    Autonomous AI Triage has segregated single-household complaints, doorstep drainage clogs, localized loudspeaker disturbances, and individual street maintenance away from the university research board. Authorities can directly issue electronic dispatch orders to the designated Ward/Village Sachivalayam.
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Stats Pill */}
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  padding: '10px 16px',
+                  borderRadius: '8px',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: '0.68rem', color: '#94a3b8' }}>Total Hyper-Local</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: '800', color: '#fb923c' }}>{allSachivalayamProblems.length}</div>
+                </div>
+                <div style={{
+                  background: 'rgba(234, 88, 12, 0.1)',
+                  border: '1px solid rgba(234, 88, 12, 0.3)',
+                  padding: '10px 16px',
+                  borderRadius: '8px',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: '0.68rem', color: '#fdba74' }}>Pending Dispatch</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: '800', color: '#ea580c' }}>{pendingSachivalayamCount}</div>
+                </div>
+                <div style={{
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                  padding: '10px 16px',
+                  borderRadius: '8px',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: '0.68rem', color: '#86efac' }}>Dispatched & Active</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: '800', color: '#10b981' }}>{allSachivalayamProblems.length - pendingSachivalayamCount}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Filter & Search Bar */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginTop: '18px',
+              paddingTop: '16px',
+              borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+              flexWrap: 'wrap',
+              gap: '12px'
+            }}>
+              {/* Status Filter Chips */}
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {['All', 'Pending Dispatch', 'Dispatched'].map(st => (
+                  <button
+                    key={st}
+                    onClick={() => setSachivalayamFilterStatus(st)}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: '6px',
+                      fontSize: '0.78rem',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                      background: sachivalayamFilterStatus === st ? '#ea580c' : 'rgba(255, 255, 255, 0.04)',
+                      color: sachivalayamFilterStatus === st ? '#ffffff' : '#94a3b8',
+                      border: sachivalayamFilterStatus === st ? '1px solid #ea580c' : '1px solid rgba(255, 255, 255, 0.08)'
+                    }}
+                  >
+                    {st === 'All' && `All Records (${allSachivalayamProblems.length})`}
+                    {st === 'Pending Dispatch' && `⏳ Pending Dispatch (${pendingSachivalayamCount})`}
+                    {st === 'Dispatched' && `✅ Dispatched (${allSachivalayamProblems.length - pendingSachivalayamCount})`}
+                  </button>
+                ))}
+              </div>
+
+              {/* Search input */}
+              <div style={{ minWidth: '280px', flex: 1, maxWidth: '400px' }}>
+                <input
+                  type="text"
+                  placeholder="Search door #, street, village, secretary, token..."
+                  value={sachivalayamSearch}
+                  onChange={(e) => setSachivalayamSearch(e.target.value)}
+                  className="input-field"
+                  style={{
+                    padding: '8px 14px',
+                    fontSize: '0.82rem',
+                    background: 'rgba(15, 23, 42, 0.8)',
+                    borderColor: 'rgba(234, 88, 12, 0.3)'
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Grievances List */}
+          {filteredSachivalayamProblems.length === 0 ? (
+            <div className="gov-card" style={{ padding: '48px 20px', textAlign: 'center' }}>
+              <CheckCircle size={42} color="#10b981" style={{ margin: '0 auto 14px auto' }} />
+              <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#f8fafc', marginBottom: '6px' }}>
+                No Hyper-Local Grievances Matching Current Criteria
+              </h3>
+              <p style={{ fontSize: '0.84rem', color: '#94a3b8' }}>
+                All doorstep, individual household, and localized nuisance complaints are cleared or no matching records found.
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {filteredSachivalayamProblems.map(prob => {
+                const isDispatched = prob.dispatchStatus === 'Dispatched';
+                return (
+                  <div
+                    key={prob.id}
+                    className="glass-card"
+                    style={{
+                      padding: '20px 24px',
+                      border: isDispatched ? '1px solid rgba(16, 185, 129, 0.3)' : '1.5px solid rgba(234, 88, 12, 0.4)',
+                      background: isDispatched ? 'rgba(15, 23, 42, 0.65)' : 'rgba(234, 88, 12, 0.03)',
+                      borderRadius: '10px'
+                    }}
+                  >
+                    <div style={{ display: 'flex', gap: '18px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                      {/* Photo Thumbnail */}
+                      {prob.photoUrl && (
+                        <img
+                          src={prob.photoUrl}
+                          alt="Grievance evidence"
+                          style={{
+                            width: '100px',
+                            height: '100px',
+                            objectFit: 'cover',
+                            borderRadius: '8px',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            flexShrink: 0
+                          }}
+                        />
+                      )}
+
+                      {/* Main Details */}
+                      <div style={{ flex: 1, minWidth: '280px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px', marginBottom: '8px' }}>
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                              <span style={{
+                                fontSize: '0.72rem',
+                                fontWeight: '800',
+                                background: '#ea580c',
+                                color: '#ffffff',
+                                padding: '2px 8px',
+                                borderRadius: '4px'
+                              }}>
+                                🏠 HYPER-LOCAL CIVIC GRIEVANCE
+                              </span>
+                              <span style={{
+                                fontSize: '0.72rem',
+                                background: 'rgba(255, 255, 255, 0.06)',
+                                color: '#94a3b8',
+                                padding: '2px 6px',
+                                borderRadius: '4px'
+                              }}>
+                                {prob.problemCode || 'CIVIC-HL'}
+                              </span>
+                              <span style={{
+                                fontSize: '0.72rem',
+                                color: '#fb923c',
+                                fontWeight: '600'
+                              }}>
+                                Category: {prob.category}
+                              </span>
+                            </div>
+
+                            <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#f8fafc', margin: '4px 0' }}>
+                              {prob.title}
+                            </h3>
+
+                            <div style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <MapPin size={14} color="#ea580c" />
+                              <span>
+                                {prob.location?.areaName ? `${prob.location.areaName}, ` : ''}
+                                {prob.location?.village}, {prob.location?.mandal}, {prob.location?.district}, {prob.location?.state}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Status Badge */}
+                          <div>
+                            {isDispatched ? (
+                              <div style={{
+                                background: 'rgba(16, 185, 129, 0.15)',
+                                border: '1px solid rgba(16, 185, 129, 0.4)',
+                                color: '#4ade80',
+                                padding: '6px 12px',
+                                borderRadius: '8px',
+                                textAlign: 'right'
+                              }}>
+                                <div style={{ fontSize: '0.62rem', fontWeight: '700', textTransform: 'uppercase' }}>STATUS: DISPATCHED</div>
+                                <div style={{ fontSize: '0.9rem', fontWeight: '800' }}>{prob.dispatchToken}</div>
+                              </div>
+                            ) : (
+                              <div style={{
+                                background: 'rgba(234, 88, 12, 0.15)',
+                                border: '1px solid rgba(234, 88, 12, 0.4)',
+                                color: '#fb923c',
+                                padding: '6px 12px',
+                                borderRadius: '8px',
+                                textAlign: 'right'
+                              }}>
+                                <div style={{ fontSize: '0.62rem', fontWeight: '700', textTransform: 'uppercase' }}>DISPATCH QUEUE</div>
+                                <div style={{ fontSize: '0.9rem', fontWeight: '800' }}>⏳ Awaiting Action</div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <p style={{ fontSize: '0.84rem', color: '#cbd5e1', lineHeight: '1.5', margin: '8px 0 12px 0' }}>
+                          {prob.description}
+                        </p>
+
+                        {/* AI Triage & Sachivalayam Desk Assignment Box */}
+                        <div style={{
+                          background: 'rgba(15, 23, 42, 0.8)',
+                          border: '1px solid rgba(234, 88, 12, 0.25)',
+                          borderRadius: '8px',
+                          padding: '12px 16px',
+                          marginBottom: '14px',
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                          gap: '12px'
+                        }}>
+                          <div>
+                            <div style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700' }}>Target Administrative Office</div>
+                            <div style={{ fontSize: '0.88rem', fontWeight: '800', color: '#fb923c', marginTop: '2px' }}>
+                              🏛️ {prob.sachivalayamOffice || `${prob.location?.village || prob.location?.mandal || 'Local'} Grama / Ward Sachivalayam`}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700' }}>Designated Department / Secretary</div>
+                            <div style={{ fontSize: '0.88rem', fontWeight: '800', color: '#38bdf8', marginTop: '2px' }}>
+                              👤 {prob.targetSecretary || 'Ward Sanitation & Environment Secretary'}
+                            </div>
+                          </div>
+                          <div style={{ gridColumn: '1 / -1' }}>
+                            <div style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700' }}>AI Segregation Rationale</div>
+                            <div style={{ fontSize: '0.8rem', color: '#cbd5e1', fontStyle: 'italic', marginTop: '2px' }}>
+                              "{prob.sachivalayamReason || 'Identified as a single-doorstep/household civic maintenance or noise nuisance complaint suitable for local municipal ward resolution rather than university technological R&D.'}"
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Dispatch Details if already dispatched */}
+                        {isDispatched && (
+                          <div style={{
+                            background: 'rgba(16, 185, 129, 0.08)',
+                            border: '1px solid rgba(16, 185, 129, 0.25)',
+                            borderRadius: '6px',
+                            padding: '10px 14px',
+                            fontSize: '0.78rem',
+                            color: '#a7f3d0',
+                            marginBottom: '14px'
+                          }}>
+                            <strong>Official Dispatch Record: </strong>
+                            Dispatched with Token <code>{prob.dispatchToken}</code> on {new Date(prob.dispatchedAt || Date.now()).toLocaleString()}.
+                            {prob.dispatchRemarks && <span> Directive: "{prob.dispatchRemarks}"</span>}
+                          </div>
+                        )}
+
+                        {/* Action Buttons */}
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'flex-end',
+                          alignItems: 'center',
+                          gap: '10px',
+                          flexWrap: 'wrap',
+                          paddingTop: '10px',
+                          borderTop: '1px solid rgba(255, 255, 255, 0.06)'
+                        }}>
+                          <button
+                            onClick={() => handleOpenDispatchModal(prob)}
+                            style={{
+                              background: 'linear-gradient(135deg, #ea580c 0%, #c2410c 100%)',
+                              color: '#ffffff',
+                              border: 'none',
+                              borderRadius: '6px',
+                              padding: '8px 16px',
+                              fontSize: '0.8rem',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              boxShadow: '0 2px 10px rgba(234, 88, 12, 0.3)'
+                            }}
+                          >
+                            <Send size={14} />
+                            <span>{isDispatched ? 'Re-Dispatch / Update Directive' : 'Forward to Ward/Grama Sachivalayam'}</span>
+                          </button>
+
+                          <button
+                            onClick={() => setProblemToDeleteSingle(prob)}
+                            style={{
+                              background: 'rgba(239, 68, 68, 0.15)',
+                              border: '1px solid rgba(239, 68, 68, 0.35)',
+                              color: '#f87171',
+                              padding: '8px 14px',
+                              borderRadius: '6px',
+                              fontSize: '0.8rem',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '5px'
+                            }}
+                            title="Delete or dismiss grievance"
+                          >
+                            <Trash2 size={14} />
+                            <span>Delete / Dismiss</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -1314,6 +1866,161 @@ export default function GovernmentPortal({
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Official Sachivalayam e-Dispatch Modal */}
+      {dispatchModalOpen && problemToDispatch && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.82)',
+          backdropFilter: 'blur(8px)',
+          zIndex: 100,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px'
+        }}>
+          <div className="gov-card" style={{
+            maxWidth: '560px',
+            width: '100%',
+            padding: '28px',
+            background: '#0f172a',
+            border: '2px solid #ea580c',
+            borderRadius: '12px',
+            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.7)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '10px',
+                  background: 'linear-gradient(135deg, #ea580c 0%, #c2410c 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <Send size={20} color="#ffffff" />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#f8fafc', margin: 0 }}>
+                    Official Sachivalayam e-Dispatch
+                  </h3>
+                  <span style={{ fontSize: '0.72rem', color: '#fb923c' }}>
+                    Automated Administrative Forwarding
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => { setDispatchModalOpen(false); setProblemToDispatch(null); }}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{
+              background: 'rgba(234, 88, 12, 0.08)',
+              border: '1px solid rgba(234, 88, 12, 0.25)',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              marginBottom: '18px'
+            }}>
+              <div style={{ fontSize: '0.74rem', color: '#94a3b8' }}>Grievance Subject:</div>
+              <div style={{ fontSize: '0.92rem', fontWeight: '700', color: '#f8fafc', marginTop: '2px' }}>
+                {problemToDispatch.title}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#fdba74', marginTop: '4px' }}>
+                📍 {problemToDispatch.location?.areaName ? `${problemToDispatch.location.areaName}, ` : ''}
+                {problemToDispatch.location?.village}, {problemToDispatch.location?.mandal}, {problemToDispatch.location?.district}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '22px' }}>
+              <div>
+                <label style={{ fontSize: '0.78rem', fontWeight: '700', color: '#cbd5e1', display: 'block', marginBottom: '6px' }}>
+                  Target Grama / Ward Sachivalayam Office *
+                </label>
+                <input
+                  type="text"
+                  value={dispatchOfficeInput}
+                  onChange={(e) => setDispatchOfficeInput(e.target.value)}
+                  className="input-field"
+                  style={{ width: '100%', fontSize: '0.85rem' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.78rem', fontWeight: '700', color: '#cbd5e1', display: 'block', marginBottom: '6px' }}>
+                  Designated Officer / Secretary Desk *
+                </label>
+                <input
+                  type="text"
+                  value={dispatchSecretaryInput}
+                  onChange={(e) => setDispatchSecretaryInput(e.target.value)}
+                  className="input-field"
+                  style={{ width: '100%', fontSize: '0.85rem' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.78rem', fontWeight: '700', color: '#cbd5e1', display: 'block', marginBottom: '6px' }}>
+                  Administrative Action Directive & Remarks
+                </label>
+                <textarea
+                  rows={3}
+                  value={dispatchRemarksInput}
+                  onChange={(e) => setDispatchRemarksInput(e.target.value)}
+                  className="input-field"
+                  style={{ width: '100%', fontSize: '0.82rem', resize: 'vertical' }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button
+                type="button"
+                onClick={() => { setDispatchModalOpen(false); setProblemToDispatch(null); }}
+                className="btn-secondary"
+                style={{ fontSize: '0.82rem', padding: '8px 16px' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDispatch}
+                disabled={isDispatching}
+                style={{
+                  background: 'linear-gradient(135deg, #ea580c 0%, #c2410c 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '8px 20px',
+                  fontSize: '0.84rem',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                {isDispatching ? (
+                  <span>Dispatching to Sachivalayam...</span>
+                ) : (
+                  <>
+                    <Send size={15} />
+                    <span>Authorize & Dispatch to Sachivalayam</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

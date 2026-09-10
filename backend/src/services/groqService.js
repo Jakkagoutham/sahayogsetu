@@ -57,12 +57,18 @@ async function runGroqCompletion(messages, maxTokens = 400) {
  */
 async function classifyProblem(title, description, locationText = "") {
   const prompt = `Classify the following citizen societal complaint for the Smart India Hackathon SahayogSetu platform.
+Evaluate both technical category and whether this is a broad "Community" issue (requires university engineering innovation) or an individual "HyperLocal_Sachivalayam" issue (single household, drainage in front of a private home, localized temple/church/function hall loudspeaker noise, personal doorstep maintenance).
+
 Respond ONLY in valid JSON format with these exact fields:
 - "category": one of ["Water", "Sanitation", "Education", "Roads", "Health", "Agriculture", "Infrastructure", "Other"]
 - "urgency": one of ["Low", "Medium", "High"]
-- "level": one of ["Village/Ward", "Mandal", "District", "State"] (based on how widespread or severe the issue is)
+- "level": one of ["Village/Ward", "Mandal", "District", "State"]
 - "maxResolutionDays": number (7 for "Village/Ward", 15 for "Mandal", 30 for "District", 90 for "State")
-- "summaryReason": brief 1-sentence explanation of why this category, level, and SLA were chosen
+- "scope": one of ["Community", "HyperLocal_Sachivalayam"]
+- "sachivalayamOffice": string (e.g. "Grama / Ward Sachivalayam Desk" or null)
+- "targetSecretary": string (one of ["Ward Sanitation & Environment Secretary", "Ward Amenities Secretary", "Ward Welfare & Police Liaison", "Panchayat Executive Secretary"] or null)
+- "sachivalayamReason": string (brief 1-sentence reason why this is an administrative ward matter rather than an engineering R&D challenge)
+- "summaryReason": brief 1-sentence explanation of category and SLA
 
 Complaint Details:
 Title: "${title}"
@@ -71,11 +77,25 @@ Location: "${locationText}"
 
 Respond with ONLY the JSON object, no Markdown code fences, no other commentary.`;
 
+  // Heuristic hyper-local check for reliability
+  const textLower = `${title} ${description}`.toLowerCase();
+  const hyperLocalPatterns = [
+    /in\s*front\s*of\s*(my|our)?\s*(home|house|gate|door|driveway|compound)/i,
+    /stuck\s*drainage|drainage\s*(is)?\s*stuck|drain\s*overflow(ing)?/i,
+    /loud\s*(disturbance|noise|speaker|music|sound)/i,
+    /(nearby|near)\s*(church|temple|mosque|function\s*hall|party|club)/i,
+    /(my|our)\s*(home|house|gate|door)\s*(water|garbage|drain|street\s*light)/i,
+    /personal\s*(problem|issue|grievance)/i,
+    /single\s*family/i,
+    /neighbour|neighbor|boundary\s*wall|stray\s*dog\s*bark/i
+  ];
+  const isHeuristicHyperLocal = hyperLocalPatterns.some(pat => pat.test(textLower));
+
   try {
     const { content } = await runGroqCompletion([
       { role: "system", content: "You are an expert AI civic triage and classification system. Always reply with strict JSON." },
       { role: "user", content: prompt }
-    ], 350);
+    ], 400);
 
     const parsed = parseJsonFromResponse(content);
     if (!parsed) throw new Error("Could not parse JSON from model response");
@@ -94,21 +114,44 @@ Respond with ONLY the JSON object, no Markdown code fences, no other commentary.
       "State": 90
     };
 
+    const isSachivalayam = parsed.scope === "HyperLocal_Sachivalayam" || isHeuristicHyperLocal;
+    let targetSecretary = parsed.targetSecretary;
+    if (isSachivalayam && !targetSecretary) {
+      if (textLower.includes('noise') || textLower.includes('speaker') || textLower.includes('loud') || textLower.includes('temple') || textLower.includes('church')) {
+        targetSecretary = "Ward Welfare & Police Liaison";
+      } else if (textLower.includes('light') || textLower.includes('water') || textLower.includes('pipe')) {
+        targetSecretary = "Ward Amenities Secretary";
+      } else {
+        targetSecretary = "Ward Sanitation & Environment Secretary";
+      }
+    }
+
     return {
       category: parsed.category || "Other",
       urgency: parsed.urgency || "Medium",
       level: level,
       maxResolutionDays: slaMap[level] || 7,
-      summaryReason: parsed.summaryReason || "Classified via Groq AI"
+      summaryReason: parsed.summaryReason || "Classified via Groq AI",
+      isSachivalayamDispatch: isSachivalayam,
+      sachivalayamOffice: isSachivalayam ? (parsed.sachivalayamOffice || "Grama / Ward Sachivalayam") : null,
+      targetSecretary: isSachivalayam ? targetSecretary : null,
+      sachivalayamReason: isSachivalayam 
+        ? (parsed.sachivalayamReason || "Localized household/nuisance grievance routed for local Grama/Ward Sachivalayam field inspection.") 
+        : null
     };
   } catch (err) {
     console.error("Groq AI classification failed, using fallback:", err.message);
+    const isSachivalayam = isHeuristicHyperLocal;
     return {
-      category: "Other",
+      category: textLower.includes('drainage') || textLower.includes('garbage') ? "Sanitation" : "Other",
       urgency: "Medium",
       level: "Village/Ward",
       maxResolutionDays: 7,
-      summaryReason: "Default triage applied (offline fallback)."
+      summaryReason: "Default triage applied (offline fallback).",
+      isSachivalayamDispatch: isSachivalayam,
+      sachivalayamOffice: isSachivalayam ? "Grama / Ward Sachivalayam" : null,
+      targetSecretary: isSachivalayam ? (textLower.includes('noise') ? "Ward Welfare & Police Liaison" : "Ward Sanitation & Environment Secretary") : null,
+      sachivalayamReason: isSachivalayam ? "Localized household/nuisance grievance routed for local Grama/Ward Sachivalayam field inspection." : null
     };
   }
 }

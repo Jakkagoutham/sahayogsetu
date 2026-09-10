@@ -287,6 +287,78 @@ const SEED_PROBLEMS = [
     rating: 4.2,
     duplicateOf: null,
     createdAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    id: "prob-105",
+    sectorCode: "SEC-SAN",
+    problemCode: "SAN-105",
+    title: "Stuck Drainage Overflowing in Front of Gate & Foul Odor (House #4-12/B)",
+    description: "The open side drain right in front of our residential home gate has collapsed and is completely blocked with silt and kitchen waste. Stagnant drain water is flooding our compound driveway, causing unbearable odor and mosquito breeding.",
+    photoUrl: "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800&auto=format&fit=crop&q=80",
+    photoAuthenticity: {
+      isRealPhoto: true,
+      confidence: 94,
+      hasGpsMeta: true,
+      detectionDetails: "Authentic mobile camera capture verified."
+    },
+    location: {
+      state: "Andhra Pradesh",
+      district: "Guntur",
+      mandal: "Mangalagiri",
+      village: "Mangalagiri Ward 7",
+      areaName: "Ganesh Nagar Lane 3, House #4-12/B",
+      pincode: "522503",
+      coordinates: { lat: 16.4326, lng: 80.5668 }
+    },
+    category: "Sanitation",
+    urgency: "Medium",
+    level: "Village/Ward",
+    maxResolutionDays: 7,
+    escalationStatus: "Normal",
+    rating: 3.5,
+    duplicateOf: null,
+    isSachivalayamDispatch: true,
+    sachivalayamOffice: "Mangalagiri Ward 7 Sachivalayam",
+    targetSecretary: "Ward Sanitation & Environment Secretary",
+    sachivalayamReason: "Single-family doorstep drainage obstruction requiring municipal safai staff clearance rather than technical university research.",
+    dispatchStatus: "Pending Dispatch",
+    createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    id: "prob-106",
+    sectorCode: "SEC-GOV",
+    problemCode: "GOV-106",
+    title: "Excessive Loudspeaker Noise Disturbance from Nearby Function Hall Past Midnight",
+    description: "High-decibel conical loudspeakers installed across our residential street at the private function hall are blasting music continuously after 11:30 PM. Senior citizens and board-exam students in our residential lane cannot sleep.",
+    photoUrl: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&auto=format&fit=crop&q=80",
+    photoAuthenticity: {
+      isRealPhoto: true,
+      confidence: 92,
+      hasGpsMeta: false,
+      detectionDetails: "Noise nuisance report recorded with local street coordinates."
+    },
+    location: {
+      state: "Telangana",
+      district: "Suryapet",
+      mandal: "Kodad",
+      village: "Kodad Town Ward 4",
+      areaName: "Opposite Shivalayam, Lane 2",
+      pincode: "508206",
+      coordinates: { lat: 16.9972, lng: 79.9678 }
+    },
+    category: "Other",
+    urgency: "Medium",
+    level: "Village/Ward",
+    maxResolutionDays: 7,
+    escalationStatus: "Normal",
+    rating: 3.2,
+    duplicateOf: null,
+    isSachivalayamDispatch: true,
+    sachivalayamOffice: "Kodad Ward 4 Sachivalayam",
+    targetSecretary: "Ward Welfare & Police Liaison",
+    sachivalayamReason: "Neighborhood noise decibel violation and localized nuisance requiring Ward Secretariat and local police liaison inspection.",
+    dispatchStatus: "Pending Dispatch",
+    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
   }
 ];
 
@@ -712,12 +784,38 @@ const db = {
       relevanceFlags: data.relevanceFlags || null,
       rating: data.isIrrelevant ? 1.0 : (data.rating || 3.5),
       duplicateOf: data.duplicateOf || null,
+      isSachivalayamDispatch: Boolean(data.isSachivalayamDispatch),
+      sachivalayamOffice: data.sachivalayamOffice || null,
+      targetSecretary: data.targetSecretary || null,
+      sachivalayamReason: data.sachivalayamReason || null,
+      dispatchStatus: data.isSachivalayamDispatch ? (data.dispatchStatus || "Pending Dispatch") : null,
+      dispatchedAt: data.dispatchedAt || null,
+      dispatchToken: data.dispatchToken || null,
+      dispatchRemarks: data.dispatchRemarks || null,
       createdAt: new Date().toISOString()
     };
 
     problems.unshift(newProblem);
     writeJSON(PROBLEMS_FILE, problems);
     return newProblem;
+  },
+
+  // Dispatch hyper-local grievance directly to Grama / Ward Sachivalayam
+  dispatchToSachivalayam(id, { office, secretary, remarks, dispatchToken, dispatchedAt } = {}) {
+    const problems = readJSON(PROBLEMS_FILE, SEED_PROBLEMS);
+    const problem = problems.find(p => p.id === id);
+    if (!problem) return null;
+
+    problem.isSachivalayamDispatch = true;
+    problem.dispatchStatus = "Dispatched";
+    if (office) problem.sachivalayamOffice = office;
+    if (secretary) problem.targetSecretary = secretary;
+    if (remarks) problem.dispatchRemarks = remarks;
+    problem.dispatchToken = dispatchToken || `SCH-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    problem.dispatchedAt = dispatchedAt || new Date().toISOString();
+
+    writeJSON(PROBLEMS_FILE, problems);
+    return problem;
   },
 
   // Resolve problem with ground-truth resolution proof photo
