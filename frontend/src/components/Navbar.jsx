@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { 
   ShieldCheck, PlusCircle, LayoutGrid, Award, 
-  Building2, ShieldAlert, ChevronDown, Check, User, Globe, Languages 
+  Building2, ShieldAlert, ChevronDown, Check, User, Globe, Languages,
+  HelpCircle, CheckCircle2, Image as ImageIcon
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -117,7 +118,7 @@ export default function Navbar({
 
         {/* Center Navigation (Relevant to Citizen View) */}
         {portalMode === 'citizen' && (
-          <nav style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <nav style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <button
               onClick={() => setActiveTab('board')}
               className={activeTab === 'board' ? 'btn-primary' : 'btn-secondary'}
@@ -128,12 +129,44 @@ export default function Navbar({
             </button>
 
             <button
+              onClick={() => setActiveTab('gallery')}
+              className={activeTab === 'gallery' ? 'btn-primary' : 'btn-secondary'}
+              style={{ 
+                padding: '7px 14px', 
+                fontSize: '0.8rem',
+                borderColor: activeTab === 'gallery' ? '#22c55e' : 'rgba(34, 197, 94, 0.4)',
+                background: activeTab === 'gallery' ? '#15803d' : 'rgba(34, 197, 94, 0.08)',
+                color: activeTab === 'gallery' ? '#ffffff' : '#4ade80'
+              }}
+              title="Verified Solved Problems Gallery with Ground Photographic Proof"
+            >
+              <CheckCircle2 size={15} />
+              <span>Solved Gallery</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('submit')}
               className={activeTab === 'submit' ? 'btn-accent' : 'btn-secondary'}
               style={{ padding: '7px 14px', fontSize: '0.8rem' }}
             >
               <PlusCircle size={15} />
               <span>{t('reportProblem')}</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('faq')}
+              className={activeTab === 'faq' ? 'btn-primary' : 'btn-secondary'}
+              style={{ 
+                padding: '7px 14px', 
+                fontSize: '0.8rem',
+                borderColor: activeTab === 'faq' ? '#3b82f6' : 'rgba(59, 130, 246, 0.4)',
+                background: activeTab === 'faq' ? '#1d4ed8' : 'rgba(59, 130, 246, 0.08)',
+                color: activeTab === 'faq' ? '#ffffff' : '#93c5fd'
+              }}
+              title="14 Public Grievance Redressal FAQs and Platform Guide"
+            >
+              <HelpCircle size={15} />
+              <span>Help & FAQs</span>
             </button>
 
             <button

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, MapPin, Clock, AlertTriangle, Award, Star, MessageSquare, ShieldCheck, CheckCircle2, ArrowUpDown, Filter, Tag } from 'lucide-react';
+import { Search, MapPin, Clock, AlertTriangle, Award, Star, MessageSquare, ShieldCheck, CheckCircle2, ArrowUpDown, Filter, Tag, HelpCircle, Image as ImageIcon } from 'lucide-react';
 
 const CATEGORIES = ["All", "Water", "Roads", "Health", "Agriculture", "Sanitation", "Education", "Other"];
 const LEVELS = ["All", "Village/Ward", "Mandal", "District", "State"];
@@ -31,7 +31,13 @@ function formatRecency(isoDate) {
   return `${diffDays} days ago`;
 }
 
-export default function ProblemBoard({ problems, onSelectProblem, loading }) {
+export default function ProblemBoard({ 
+  problems, 
+  onSelectProblem, 
+  loading,
+  onNavigateGallery,
+  onNavigateFAQ
+}) {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedLevel, setSelectedLevel] = useState('All');
@@ -172,16 +178,125 @@ export default function ProblemBoard({ problems, onSelectProblem, loading }) {
             <div style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '600' }}>ACTIVE ISSUES</div>
             <div style={{ fontSize: '1.2rem', fontWeight: '800', color: '#b45309' }}>{totalOpen}</div>
           </div>
-          <div style={{
-            background: '#f0fdf4',
-            border: '1px solid #bbf7d0',
-            borderRadius: '5px',
-            padding: '8px 14px',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '0.72rem', color: '#166534', fontWeight: '600' }}>SOLVED (WITH PROOF)</div>
+          <div 
+            onClick={onNavigateGallery}
+            style={{
+              background: '#f0fdf4',
+              border: '2px solid #86efac',
+              borderRadius: '5px',
+              padding: '8px 14px',
+              textAlign: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 2px 8px rgba(22, 163, 74, 0.12)'
+            }}
+            title="Click to view all Solved Grievances in the Gallery"
+          >
+            <div style={{ fontSize: '0.72rem', color: '#166534', fontWeight: '700' }}>SOLVED (WITH PROOF) ↗</div>
             <div style={{ fontSize: '1.2rem', fontWeight: '800', color: '#15803d' }}>{totalSolved}</div>
           </div>
+        </div>
+      </div>
+
+      {/* User Requested: Home Dashboard Navigation Bar for Solved Problems Gallery */}
+      <div style={{
+        background: '#ffffff',
+        border: '1px solid #cbd5e1',
+        borderRadius: '8px',
+        padding: '10px 16px',
+        marginBottom: '22px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '12px',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <button
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '9px 18px',
+              borderRadius: '6px',
+              fontSize: '0.85rem',
+              fontWeight: '700',
+              background: '#0a3977',
+              color: '#ffffff',
+              border: 'none',
+              cursor: 'default',
+              boxShadow: '0 2px 6px rgba(10, 57, 119, 0.25)'
+            }}
+          >
+            <span>📋 Active Grievances Board</span>
+            <span style={{
+              background: 'rgba(255,255,255,0.22)',
+              padding: '2px 8px',
+              borderRadius: '12px',
+              fontSize: '0.75rem',
+              fontWeight: '800'
+            }}>
+              {totalOpen}
+            </span>
+          </button>
+
+          <button
+            onClick={onNavigateGallery}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '9px 18px',
+              borderRadius: '6px',
+              fontSize: '0.85rem',
+              fontWeight: '800',
+              background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+              color: '#15803d',
+              border: '2px solid #86efac',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 3px 10px rgba(22, 163, 74, 0.15)'
+            }}
+            title="Open Solved Problems Gallery with Before & After Ground Proof and 'SOLVED' Badges"
+          >
+            <ImageIcon size={17} color="#15803d" />
+            <span>🖼️ Solved Problems Gallery</span>
+            <span style={{
+              background: '#15803d',
+              color: '#ffffff',
+              padding: '2px 8px',
+              borderRadius: '12px',
+              fontSize: '0.72rem',
+              fontWeight: '800',
+              letterSpacing: '0.04em'
+            }}>
+              {totalSolved} "SOLVED"
+            </span>
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button
+            onClick={onNavigateFAQ}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              fontSize: '0.82rem',
+              fontWeight: '700',
+              background: '#eff6ff',
+              color: '#1e40af',
+              border: '1px solid #bfdbfe',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <HelpCircle size={15} color="#1e40af" />
+            <span>14 Portal FAQs & Help Guide</span>
+          </button>
         </div>
       </div>
 

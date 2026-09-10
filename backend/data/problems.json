@@ -374,7 +374,14 @@
     "duplicateOf": null,
     "createdAt": "2026-09-02T08:59:59.118Z",
     "sectorCode": "SEC-RDS",
-    "problemCode": "RDS-102"
+    "problemCode": "RDS-102",
+    "status": "Solved",
+    "resolutionProof": {
+      "photoUrl": "https://images.unsplash.com/photo-1545459720-aac8509eb02c?w=800&auto=format&fit=crop&q=80",
+      "description": "Reinforced precast concrete culvert bridge installed and load-tested. Two-way all-weather vehicular and ambulance access restored to all 6 hamlets.",
+      "resolvedBy": "SetuBandhan Infrastructure Team (NIT Durgapur) & Kundgol PWD Sub-Division",
+      "resolvedAt": "2026-09-09T14:30:00.000Z"
+    }
   },
   {
     "id": "prob-103",
@@ -450,5 +457,87 @@
     },
     "sectorCode": "SEC-AGR",
     "problemCode": "AGR-104"
+  },
+  {
+    "id": "prob-107",
+    "sectorCode": "SEC-WTR",
+    "problemCode": "WTR-107",
+    "title": "Restoration of Solar Fluoride Filtration Plant in Primary School",
+    "description": "Fluoride contamination in school borewell water reached dangerous levels (3.1 ppm). Children were exhibiting early dental fluorosis symptoms.",
+    "photoUrl": "https://images.unsplash.com/photo-1578328819058-b69f3a3b0f6b?w=800&auto=format&fit=crop&q=80",
+    "status": "Solved",
+    "photoAuthenticity": {
+      "isRealPhoto": true,
+      "confidence": 96,
+      "hasGpsMeta": true,
+      "detectionDetails": "Verified genuine ground proof photo."
+    },
+    "location": {
+      "state": "Rajasthan",
+      "district": "Nagaur",
+      "mandal": "Merta",
+      "village": "Gaguda",
+      "areaName": "Govt Senior Secondary School Campus",
+      "pincode": "341510",
+      "coordinates": {
+        "lat": 26.65,
+        "lng": 74.03
+      }
+    },
+    "category": "Water",
+    "urgency": "High",
+    "level": "Village/Ward",
+    "maxResolutionDays": 7,
+    "escalationStatus": "Normal",
+    "rating": 4.9,
+    "duplicateOf": null,
+    "resolutionProof": {
+      "photoUrl": "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&auto=format&fit=crop&q=80",
+      "description": "Commissioned 500 LPH indigenous solar-powered activated alumina nano-filter with automated backwash. Fluoride reduced from 3.1 ppm to 0.4 ppm (safe limit). Verified by District Jal Jeevan Testing Lab.",
+      "resolvedBy": "Jal-Drishti Innovators (IIT Roorkee Hub) & PHED Nagaur",
+      "resolvedAt": "2026-09-08T11:00:00.000Z"
+    },
+    "createdAt": "2026-09-01T10:00:00.000Z"
+  },
+  {
+    "id": "prob-108",
+    "sectorCode": "SEC-SAN",
+    "problemCode": "SAN-108",
+    "title": "Desilting and Sinking Slab Cover on Choked Town Commercial Drain",
+    "description": "Open stormwater drain choked with plastic sludge causing backflow into market shops and street vendors.",
+    "photoUrl": "https://images.unsplash.com/photo-1530587191325-3db32d826c18?w=800&auto=format&fit=crop&q=80",
+    "status": "Solved",
+    "photoAuthenticity": {
+      "isRealPhoto": true,
+      "confidence": 94,
+      "hasGpsMeta": true,
+      "detectionDetails": "Verified genuine ground proof photo."
+    },
+    "location": {
+      "state": "Telangana",
+      "district": "Warangal",
+      "mandal": "Hanamkonda",
+      "village": "Hanamkonda Ward 12",
+      "areaName": "Subedari Main Bazaar",
+      "pincode": "506001",
+      "coordinates": {
+        "lat": 17.9689,
+        "lng": 79.5941
+      }
+    },
+    "category": "Sanitation",
+    "urgency": "Medium",
+    "level": "Village/Ward",
+    "maxResolutionDays": 7,
+    "escalationStatus": "Normal",
+    "rating": 4.5,
+    "duplicateOf": null,
+    "resolutionProof": {
+      "photoUrl": "https://images.unsplash.com/photo-1621451537084-482c73073a0f?w=800&auto=format&fit=crop&q=80",
+      "description": "Heavy mechanical silt suction deployed. 180 meters of blocked masonry drain desilted, concrete grating slabs placed, and disinfectant sprayed.",
+      "resolvedBy": "Greater Warangal Municipal Corporation (GWMC) Ward 12 Sanitation Desk",
+      "resolvedAt": "2026-09-09T16:45:00.000Z"
+    },
+    "createdAt": "2026-09-02T12:00:00.000Z"
   }
 ]

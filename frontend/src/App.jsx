@@ -7,6 +7,8 @@ import SubmitProblem from './pages/SubmitProblem';
 import CollegePortal from './pages/CollegePortal';
 import GovernmentPortal from './pages/GovernmentPortal';
 import SuperAdminPortal from './pages/SuperAdminPortal';
+import SolvedGallery from './pages/SolvedGallery';
+import FAQPage from './pages/FAQPage';
 import GestureNavButton from './components/GestureNavButton';
 import { Award, ShieldCheck } from 'lucide-react';
 import { LanguageProvider } from './context/LanguageContext';
@@ -119,15 +121,20 @@ function MainApp() {
       if (prev.portalMode === 'college') return 'College Hub';
       if (prev.portalMode === 'government') return 'Government Portal';
       if (prev.portalMode === 'citizen') {
-        return prev.activeTab === 'submit' ? 'Report Form' : 'Citizen Board';
+        if (prev.activeTab === 'submit') return 'Report Form';
+        if (prev.activeTab === 'gallery') return 'Solved Gallery';
+        if (prev.activeTab === 'faq') return 'Help & FAQs';
+        return 'Citizen Board';
       }
     }
     if (activeTab === 'detail') return 'Dashboard';
+    if (activeTab === 'gallery') return 'Citizen Board';
+    if (activeTab === 'faq') return 'Citizen Board';
     if (portalMode !== 'citizen') return 'Citizen Board';
     return '';
   };
 
-  const canGoBack = historyStack.length > 0 || activeTab === 'detail' || portalMode !== 'citizen';
+  const canGoBack = historyStack.length > 0 || activeTab === 'detail' || activeTab === 'gallery' || activeTab === 'faq' || portalMode !== 'citizen';
   const totalSolutions = problems.reduce((acc, p) => acc + (p.solutionCount || 0), 0);
 
   return (
@@ -167,6 +174,24 @@ function MainApp() {
                     problems={problems}
                     loading={loading}
                     onSelectProblem={handleSelectProblem}
+                    onNavigateGallery={() => handleTabSwitch('gallery')}
+                    onNavigateFAQ={() => handleTabSwitch('faq')}
+                  />
+                )}
+
+                {activeTab === 'gallery' && (
+                  <SolvedGallery
+                    problems={problems}
+                    onSelectProblem={handleSelectProblem}
+                    onNavigateBoard={() => handleTabSwitch('board')}
+                    onNavigateReport={() => handleTabSwitch('submit')}
+                  />
+                )}
+
+                {activeTab === 'faq' && (
+                  <FAQPage
+                    onNavigateBoard={() => handleTabSwitch('board')}
+                    onNavigateReport={() => handleTabSwitch('submit')}
                   />
                 )}
 
@@ -260,6 +285,44 @@ function MainApp() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+            <button 
+              onClick={() => handleTabSwitch('gallery')}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#4ade80',
+                fontSize: '0.8rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <span>🖼️ Solved Gallery</span>
+            </button>
+
+            <span style={{ fontSize: '0.8rem', color: '#475569' }}>•</span>
+
+            <button 
+              onClick={() => handleTabSwitch('faq')}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#93c5fd',
+                fontSize: '0.8rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <span>📖 Help & FAQs</span>
+            </button>
+
+            <span style={{ fontSize: '0.8rem', color: '#475569' }}>•</span>
+
             <button 
               onClick={() => setIsRubricOpen(true)}
               style={{
