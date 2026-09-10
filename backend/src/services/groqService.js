@@ -338,10 +338,111 @@ Respond with ONLY valid JSON, no markdown fences.`;
   }
 }
 
+/**
+ * 5. Comprehensive 5-Aspect Relevance Audit
+ * Audits: (1) Photo, (2) Title, (3) Description, (4) Place details, (5) Civic Context.
+ * If any aspect looks irrelevant, marks isIrrelevant: true so it can be kept at the very last
+ * with title 'Irrelevant' and routed to government moderation notification.
+ */
+async function auditComprehensiveProblem({ title, description, location, photoDataUrl }) {
+  const locationText = `${location?.village || ''}, ${location?.mandal || ''}, ${location?.district || ''}, ${location?.state || ''} - ${location?.pincode || ''}`;
+  
+  // Quick heuristic check for obvious gibberish or spam
+  const cleanTitle = (title || '').trim().toLowerCase();
+  const cleanDesc = (description || '').trim().toLowerCase();
+  const gibberishRegex = /^(asdf|qwerty|test[0-9]*$|aaaa|zzzz|1234|xyz|blah|foo|bar)/i;
+  
+  let heuristicFlag = null;
+  if (cleanTitle.length < 4 || gibberishRegex.test(cleanTitle)) {
+    heuristicFlag = "Title contains meaningless or test gibberish.";
+  } else if (cleanDesc.length < 8 || gibberishRegex.test(cleanDesc)) {
+    heuristicFlag = "Description lacks sufficient civic context or contains test input.";
+  }
+
+  // 1. Inspect Photo if present as uploaded base64 data
+  let photoAudit = { isRelevant: true, detectedSubject: "Ground photograph", reason: "" };
+  if (photoDataUrl && photoDataUrl.startsWith('data:')) {
+    photoAudit = await verifyPhotoRelevance(photoDataUrl, title, description, locationText);
+  }
+
+  // 2. Perform holistic 5-aspect LLM evaluation
+  const prompt = `You are an AI Civic Integrity & Moderation System for an official Government Grievance Portal (SahayogSetu).
+Evaluate whether the following citizen complaint submission is a GENUINE and RELEVANT public/societal problem, or if it is IRRELEVANT (spam, nonsensical, test input, personal rant, non-civic chat, abusive, fake place, or mismatched photo).
+
+Submission details across 5 dimensions:
+1. PROBLEM TITLE: "${title}"
+2. PROBLEM DESCRIPTION: "${description}"
+3. PROBLEM PLACE DETAILS: State: "${location?.state || ''}", District: "${location?.district || ''}", Mandal: "${location?.mandal || ''}", Village/Ward: "${location?.village || ''}", Pincode: "${location?.pincode || ''}"
+4. PROBLEM CONTEXT: Is this an authentic civic/public infrastructure/societal issue (water, roads, health, agriculture, sanitation, education, power, environment)?
+5. PHOTO AUDIT SUMMARY: "${photoAudit.detectedSubject} - ${photoAudit.reason}" (Photo matches: ${photoAudit.isRelevant})
+
+Evaluation Guidelines:
+- Mark "isIrrelevant": true if ANY of the 5 aspects fails:
+  * Title is gibberish, joke, promotional, or completely unrelated to civic challenges
+  * Description is nonsensical, empty of civic details, or purely personal
+  * Place details are obviously fake, nonsensical, or absent
+  * Problem context is not a societal grievance
+  * Photo is completely irrelevant (e.g. selfies, memes, food, domestic pets)
+- Mark "isIrrelevant": false ONLY if all aspects are coherent, relevant, and represent a legitimate societal grievance.
+
+Respond ONLY with valid JSON:
+{
+  "isIrrelevant": boolean,
+  "relevanceScore": number,
+  "flagReason": "concise 1-sentence explanation of which aspect was irrelevant and why (or empty string if valid)",
+  "detectedSubject": "summary of detected content"
+}`;
+
+  try {
+    const { content } = await runGroqCompletion([
+      { role: "system", content: "You are a strict AI civic grievance moderation inspector. Always return valid JSON." },
+      { role: "user", content: prompt }
+    ], 300);
+
+    const parsed = parseJsonFromResponse(content);
+    if (parsed && typeof parsed.isIrrelevant === 'boolean') {
+      if (!photoAudit.isRelevant) {
+        return {
+          isIrrelevant: true,
+          relevanceScore: Math.min(parsed.relevanceScore || 30, photoAudit.relevanceScore || 20),
+          flagReason: photoAudit.reason || parsed.flagReason || "Photo does not depict the reported civic problem.",
+          detectedSubject: photoAudit.detectedSubject || parsed.detectedSubject || "Mismatched photo"
+        };
+      }
+      return {
+        isIrrelevant: parsed.isIrrelevant,
+        relevanceScore: Number(parsed.relevanceScore) || (parsed.isIrrelevant ? 25 : 85),
+        flagReason: parsed.flagReason || (parsed.isIrrelevant ? "Submission flagged as irrelevant or non-civic." : ""),
+        detectedSubject: parsed.detectedSubject || "Civic Complaint"
+      };
+    }
+  } catch (err) {
+    console.warn("Groq comprehensive relevance audit failed, using heuristic fallback:", err.message);
+  }
+
+  // Fallback heuristic if LLM call failed or offline
+  if (heuristicFlag || !photoAudit.isRelevant) {
+    return {
+      isIrrelevant: true,
+      relevanceScore: 30,
+      flagReason: heuristicFlag || photoAudit.reason || "Uploaded photo or submission text lacks civic relevance.",
+      detectedSubject: photoAudit.detectedSubject || "Unverified content"
+    };
+  }
+
+  return {
+    isIrrelevant: false,
+    relevanceScore: 85,
+    flagReason: "",
+    detectedSubject: "Verified Civic Report"
+  };
+}
+
 module.exports = {
   classifyProblem,
   evaluateSolution,
   checkDuplicateAndSimilar,
-  verifyPhotoRelevance
+  verifyPhotoRelevance,
+  auditComprehensiveProblem
 };
 

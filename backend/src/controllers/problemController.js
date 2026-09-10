@@ -44,28 +44,45 @@ async function createProblem(req, res) {
 
     const locationText = `${village || ''}, ${mandal || ''}, ${district || ''}, ${state || ''} - ${pincode || ''}`;
 
-    // 2. Photo Relevance Ground-Truth Inspection
-    // When a photo is uploaded, verify via AI Vision if it matches the complaint
-    if (req.file || (photoUrl && photoUrl.startsWith('data:'))) {
-      const relevanceAudit = await groqService.verifyPhotoRelevance(finalPhotoUrl, title, description, locationText);
-      if (!relevanceAudit.isRelevant) {
-        return res.status(422).json({
-          success: false,
-          error: "Photo Relevance Mismatch",
-          message: "The uploaded photo is not relevant to the problem statement. Government grievance records require authentic ground proof.",
-          detectedSubject: relevanceAudit.detectedSubject,
-          reason: relevanceAudit.reason,
-          relevanceScore: relevanceAudit.relevanceScore
-        });
-      }
-    }
+    // 2. Comprehensive 5-Aspect AI Audit (Photo, Title, Description, Place Details, Context)
+    const relevanceAudit = await groqService.auditComprehensiveProblem({
+      title,
+      description,
+      location: { state, district, mandal, village, pincode, areaName },
+      photoDataUrl: finalPhotoUrl
+    });
 
-    // 3. Call Groq AI for Automatic Triage & SLA Assignment
-    const aiClassification = await groqService.classifyProblem(title, description, locationText);
+    let category = "Other";
+    let urgency = "Medium";
+    let level = "Village/Ward";
+    let maxResolutionDays = 7;
+    let isIrrelevant = false;
+    let relevanceFlags = null;
+
+    if (relevanceAudit.isIrrelevant) {
+      isIrrelevant = true;
+      category = "Irrelevant";
+      urgency = "Low";
+      level = "Village/Ward";
+      maxResolutionDays = 90;
+      relevanceFlags = {
+        isIrrelevant: true,
+        flagReason: relevanceAudit.flagReason,
+        detectedSubject: relevanceAudit.detectedSubject,
+        relevanceScore: relevanceAudit.relevanceScore
+      };
+    } else {
+      // 3. Call Groq AI for Automatic Triage & SLA Assignment for valid complaints
+      const aiClassification = await groqService.classifyProblem(title, description, locationText);
+      category = aiClassification.category;
+      urgency = aiClassification.urgency;
+      level = aiClassification.level;
+      maxResolutionDays = aiClassification.maxResolutionDays;
+    }
 
     // 4. Duplicate Detection Check
     const { localMatches, crossStateMatches } = db.findSimilarCandidates(
-      aiClassification.category, 
+      category, 
       village, 
       mandal, 
       district, 
@@ -98,16 +115,20 @@ async function createProblem(req, res) {
         pincode: pincode || "",
         coordinates: photoAudit.coordinates || { lat: 20.5937, lng: 78.9629 }
       },
-      category: aiClassification.category,
-      urgency: aiClassification.urgency,
-      level: aiClassification.level,
-      maxResolutionDays: aiClassification.maxResolutionDays,
+      category,
+      urgency,
+      level,
+      maxResolutionDays,
+      isIrrelevant,
+      relevanceFlags,
       duplicateOf: duplicateCheck.isDuplicate ? duplicateCheck.matchedProblemId : null
     });
 
     return res.status(201).json({
       success: true,
       problem: created,
+      isIrrelevant: isIrrelevant,
+      flagReason: relevanceFlags?.flagReason || null,
       duplicateDetected: duplicateCheck.isDuplicate,
       matchedDuplicateId: duplicateCheck.matchedProblemId,
       crossStateSimilarProblems: crossStateMatches
@@ -205,11 +226,52 @@ function updateProblemStatus(req, res) {
   }
 }
 
+// DELETE /api/problems/:id
+function deleteProblem(req, res) {
+  try {
+    const { id } = req.params;
+    const removed = db.deleteProblem(id);
+    if (!removed) {
+      return res.status(404).json({ error: "Problem not found." });
+    }
+    return res.json({ 
+      success: true, 
+      message: "Problem successfully removed from the site.", 
+      id: removed.id,
+      title: removed.title
+    });
+  } catch (err) {
+    console.error("Error deleting problem:", err);
+    return res.status(500).json({ error: "Failed to delete problem." });
+  }
+}
+
+// POST /api/problems/batch-delete
+function batchDeleteProblems(req, res) {
+  try {
+    const ids = req.body.ids || req.body.problemIds;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: "An array of problem IDs is required for batch deletion." });
+    }
+    const result = db.deleteProblems(ids);
+    return res.json({
+      success: true,
+      message: `Successfully deleted ${result.deletedCount} problems from the platform.`,
+      deletedCount: result.deletedCount
+    });
+  } catch (err) {
+    console.error("Error batch deleting problems:", err);
+    return res.status(500).json({ error: "Failed to batch delete problems." });
+  }
+}
+
 module.exports = {
   createProblem,
   getProblems,
   getProblemById,
   resolveProblem,
-  updateProblemStatus
+  updateProblemStatus,
+  deleteProblem,
+  batchDeleteProblems
 };
 

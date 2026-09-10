@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Camera, MapPin, ShieldAlert, Sparkles, CheckCircle, AlertTriangle, ArrowRight, Layers, RefreshCw, XCircle } from 'lucide-react';
+import { Camera, MapPin, ShieldAlert, Sparkles, CheckCircle, AlertTriangle, ArrowRight, Layers, RefreshCw, XCircle, ArrowLeft } from 'lucide-react';
 import EXIF from 'exif-js';
 
 const INDIAN_STATES = [
@@ -187,6 +187,18 @@ export default function SubmitProblem({ onProblemCreated, onNavigateBoard }) {
 
   return (
     <div style={{ maxWidth: '900px', margin: '0 auto', padding: '32px 20px' }}>
+      {/* Top Navigation Back Button (Requirement 2) */}
+      <div style={{ marginBottom: '18px' }}>
+        <button 
+          onClick={onNavigateBoard} 
+          className="btn-secondary"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', fontSize: '0.85rem' }}
+        >
+          <ArrowLeft size={16} color="#0a3977" />
+          <span>Back to Problem Board</span>
+        </button>
+      </div>
+
       {/* Title & Privacy Guarantee Header */}
       <div style={{ marginBottom: '28px', textAlign: 'center' }}>
         <h1 style={{ fontSize: '1.9rem', fontWeight: '800', color: '#0a3977', marginBottom: '8px' }}>
@@ -223,20 +235,26 @@ export default function SubmitProblem({ onProblemCreated, onNavigateBoard }) {
               width: '60px',
               height: '60px',
               borderRadius: '50%',
-              background: '#dcfce7',
-              border: '2px solid #16a34a',
+              background: submissionResult.isIrrelevant ? '#fef2f2' : '#dcfce7',
+              border: submissionResult.isIrrelevant ? '2px solid #ef4444' : '2px solid #16a34a',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 16px auto'
             }}>
-              <CheckCircle size={36} color="#15803d" />
+              {submissionResult.isIrrelevant ? (
+                <AlertTriangle size={36} color="#dc2626" />
+              ) : (
+                <CheckCircle size={36} color="#15803d" />
+              )}
             </div>
-            <h2 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#0a3977', marginBottom: '6px' }}>
-              Problem Successfully Registered!
+            <h2 style={{ fontSize: '1.4rem', fontWeight: '800', color: submissionResult.isIrrelevant ? '#991b1b' : '#0a3977', marginBottom: '6px' }}>
+              {submissionResult.isIrrelevant ? 'Grievance Queued for AI Moderation' : 'Problem Successfully Registered!'}
             </h2>
             <p style={{ color: '#475569', fontSize: '0.9rem' }}>
-              Autonomous Groq AI has classified your issue and forwarded it to university engineering problem solvers.
+              {submissionResult.isIrrelevant 
+                ? `Advisory: Groq AI flagged this report (${submissionResult.flagReason || 'Photo or context mismatch'}). It has been queued under the low priority Irrelevant section for administrative review.`
+                : 'Autonomous Groq AI has classified your issue and forwarded it to university engineering problem solvers.'}
             </p>
           </div>
 

@@ -4,6 +4,7 @@ require('dotenv').config();
 
 const problemsRouter = require('./src/routes/problems');
 const solutionsRouter = require('./src/routes/solutions');
+const institutionsRouter = require('./src/routes/institutions');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -31,6 +32,7 @@ app.get('/api/health', (req, res) => {
 // Mount Routes
 app.use('/api/problems', problemsRouter);
 app.use('/api/solutions', solutionsRouter);
+app.use('/api/institutions', institutionsRouter);
 
 // Global 404 Handler
 app.use((req, res) => {

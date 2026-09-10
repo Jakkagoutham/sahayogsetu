@@ -6,6 +6,7 @@ import ProblemDetail from './pages/ProblemDetail';
 import SubmitProblem from './pages/SubmitProblem';
 import CollegePortal from './pages/CollegePortal';
 import GovernmentPortal from './pages/GovernmentPortal';
+import SuperAdminPortal from './pages/SuperAdminPortal';
 import GestureNavButton from './components/GestureNavButton';
 import { Award, ShieldCheck } from 'lucide-react';
 
@@ -100,6 +101,11 @@ export default function App() {
       setActiveTab('board');
       setSelectedProblemId(null);
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (portalMode !== 'citizen') {
+      setPortalMode('citizen');
+      setActiveTab('board');
+      setSelectedProblemId(null);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -108,6 +114,7 @@ export default function App() {
     if (historyStack.length > 0) {
       const prev = historyStack[historyStack.length - 1];
       if (prev.selectedProblemId) return 'Problem Detail';
+      if (prev.portalMode === 'superadmin') return 'Super Admin';
       if (prev.portalMode === 'college') return 'College Hub';
       if (prev.portalMode === 'government') return 'Government Portal';
       if (prev.portalMode === 'citizen') {
@@ -115,10 +122,11 @@ export default function App() {
       }
     }
     if (activeTab === 'detail') return 'Dashboard';
+    if (portalMode !== 'citizen') return 'Citizen Board';
     return '';
   };
 
-  const canGoBack = historyStack.length > 0 || activeTab === 'detail';
+  const canGoBack = historyStack.length > 0 || activeTab === 'detail' || portalMode !== 'citizen';
   const totalSolutions = problems.reduce((acc, p) => acc + (p.solutionCount || 0), 0);
 
   return (
@@ -142,6 +150,7 @@ export default function App() {
         {activeTab === 'detail' && selectedProblemId ? (
           <ProblemDetail
             problemId={selectedProblemId}
+            portalMode={portalMode}
             onBack={handleGoBack}
             onNavigateToProblem={(id) => {
               handleSelectProblem(id);
@@ -177,6 +186,7 @@ export default function App() {
                 problems={problems}
                 onSelectProblem={handleSelectProblem}
                 onProblemUpdated={fetchProblems}
+                onBack={handleGoBack}
               />
             )}
 
@@ -186,6 +196,19 @@ export default function App() {
                 problems={problems}
                 onSelectProblem={handleSelectProblem}
                 onSwitchToCollege={() => handlePortalSwitch('college')}
+                onProblemUpdated={fetchProblems}
+                onBack={handleGoBack}
+              />
+            )}
+
+            {/* 4. SUPER ADMIN PORTAL */}
+            {portalMode === 'superadmin' && (
+              <SuperAdminPortal
+                problems={problems}
+                onSelectProblem={handleSelectProblem}
+                onSwitchToCollege={() => handlePortalSwitch('college')}
+                onProblemUpdated={fetchProblems}
+                onBack={handleGoBack}
               />
             )}
           </>
@@ -257,8 +280,14 @@ export default function App() {
             <span style={{ fontSize: '0.8rem', color: '#475569' }}>•</span>
 
             <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-              Active View: <strong style={{ color: portalMode === 'college' ? '#4ade80' : portalMode === 'government' ? '#fb923c' : '#60a5fa' }}>
-                {portalMode === 'college' ? 'College Hub' : portalMode === 'government' ? 'Government Command' : 'Citizen Portal'}
+              Active View: <strong style={{ 
+                color: portalMode === 'college' ? '#4ade80' : 
+                       portalMode === 'government' ? '#fb923c' : 
+                       portalMode === 'superadmin' ? '#c084fc' : '#60a5fa' 
+              }}>
+                {portalMode === 'college' ? 'College Hub' : 
+                 portalMode === 'government' ? 'Government Command' : 
+                 portalMode === 'superadmin' ? 'Super Admin' : 'Citizen Portal'}
               </strong>
             </span>
           </div>

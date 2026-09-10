@@ -5,11 +5,130 @@ const { v4: uuidv4 } = require('uuid');
 const DATA_DIR = path.join(__dirname, '..', '..', 'data');
 const PROBLEMS_FILE = path.join(DATA_DIR, 'problems.json');
 const SOLUTIONS_FILE = path.join(DATA_DIR, 'solutions.json');
+const INSTITUTIONS_FILE = path.join(DATA_DIR, 'institutions.json');
 
 // Ensure data directory exists
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
+
+// Pre-seeded premier institution hubs for national coverage
+const SEED_INSTITUTIONS = [
+  {
+    id: "iit-roorkee",
+    name: "IIT Roorkee",
+    fullName: "Indian Institute of Technology Roorkee",
+    hubCode: "HUB-IITR-01",
+    state: "Uttarakhand",
+    district: "Haridwar",
+    aisheCode: "U-0560",
+    nodalOfficer: "Prof. S. K. Bhattacharya",
+    nodalEmail: "innovation.hub@iitr.ac.in",
+    nodalPhone: "+91 98765 43210",
+    domains: ["Water Resources", "Rural Infrastructure", "Earthquake Engineering"],
+    activeTeams: 18,
+    submittedSolutionsCount: 8,
+    avgScore: 92.4,
+    nationalRank: 2,
+    badge: "Tier-1 Premier Hub",
+    createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    id: "nit-durgapur",
+    name: "NIT Durgapur",
+    fullName: "National Institute of Technology Durgapur",
+    hubCode: "HUB-NITD-09",
+    state: "West Bengal",
+    district: "Paschim Bardhaman",
+    aisheCode: "U-0573",
+    nodalOfficer: "Dr. Mousumi Sen",
+    nodalEmail: "iic.head@nitdgp.ac.in",
+    nodalPhone: "+91 98765 43211",
+    domains: ["Renewable Energy", "Waste Management", "IoT Monitoring"],
+    activeTeams: 12,
+    submittedSolutionsCount: 5,
+    avgScore: 88.0,
+    nationalRank: 7,
+    badge: "Center of Excellence",
+    createdAt: new Date(Date.now() - 50 * 24 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    id: "rvce-bengaluru",
+    name: "RV College of Engineering",
+    fullName: "RV College of Engineering, Bengaluru",
+    hubCode: "HUB-RVCE-24",
+    state: "Karnataka",
+    district: "Bengaluru Urban",
+    aisheCode: "C-1254",
+    nodalOfficer: "Dr. K. N. Subramanya",
+    nodalEmail: "ruraltech@rvce.edu.in",
+    nodalPhone: "+91 98765 43212",
+    domains: ["Smart Agriculture", "Autonomous Systems", "Water Purification"],
+    activeTeams: 15,
+    submittedSolutionsCount: 6,
+    avgScore: 89.2,
+    nationalRank: 5,
+    badge: "Autonomous Innovation Lab",
+    createdAt: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    id: "iit-hyderabad",
+    name: "IIT Hyderabad",
+    fullName: "Indian Institute of Technology Hyderabad",
+    hubCode: "HUB-IITH-03",
+    state: "Telangana",
+    district: "Sangareddy",
+    aisheCode: "U-0013",
+    nodalOfficer: "Prof. B. S. Murty",
+    nodalEmail: "rutag@iith.ac.in",
+    nodalPhone: "+91 98765 43213",
+    domains: ["Healthcare Diagnostics", "5G Rural Connectivity", "Smart Materials"],
+    activeTeams: 22,
+    submittedSolutionsCount: 9,
+    avgScore: 94.8,
+    nationalRank: 1,
+    badge: "Top Ranked National Hub",
+    createdAt: new Date(Date.now() - 70 * 24 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    id: "nit-patna",
+    name: "NIT Patna",
+    fullName: "National Institute of Technology Patna",
+    hubCode: "HUB-NITP-15",
+    state: "Bihar",
+    district: "Patna",
+    aisheCode: "U-0072",
+    nodalOfficer: "Dr. P. K. Jain",
+    nodalEmail: "civictech@nitp.ac.in",
+    nodalPhone: "+91 98765 43214",
+    domains: ["River Embankment", "Solar Microgrids", "Sanitation"],
+    activeTeams: 9,
+    submittedSolutionsCount: 4,
+    avgScore: 86.5,
+    nationalRank: 11,
+    badge: "State Emerging Hub",
+    createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+  },
+  {
+    id: "iit-bombay",
+    name: "IIT Bombay",
+    fullName: "Indian Institute of Technology Bombay",
+    hubCode: "HUB-IITB-02",
+    state: "Maharashtra",
+    district: "Mumbai Suburban",
+    aisheCode: "U-0306",
+    nodalOfficer: "Prof. Milind Atrey",
+    nodalEmail: "ctara@iitb.ac.in",
+    nodalPhone: "+91 98765 43215",
+    domains: ["Rural Technology", "Clean Air", "Low-cost Sanitation"],
+    activeTeams: 20,
+    submittedSolutionsCount: 7,
+    avgScore: 93.1,
+    nationalRank: 3,
+    badge: "Tier-1 Premier Hub",
+    createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString()
+  }
+];
 
 // Standardized Sector Mapping for Civic & Societal Problems
 const SECTOR_MAP = {
@@ -338,7 +457,8 @@ function writeJSON(file, data) {
 function initializeDatabase() {
   const problems = readJSON(PROBLEMS_FILE, SEED_PROBLEMS);
   const solutions = readJSON(SOLUTIONS_FILE, SEED_SOLUTIONS);
-  console.log(`Database initialized: ${problems.length} problems, ${solutions.length} solutions.`);
+  const institutions = readJSON(INSTITUTIONS_FILE, SEED_INSTITUTIONS);
+  console.log(`Database initialized: ${problems.length} problems, ${solutions.length} solutions, ${institutions.length} institutions.`);
 }
 
 initializeDatabase();
@@ -434,7 +554,13 @@ const db = {
 
     if (search) {
       // User requirement: When searching anything, show the recent uploads first with high rating
+      // BUT keep AI-flagged irrelevant problems at the very bottom
       problems.sort((a, b) => {
+        const isIrrA = a.isIrrelevant === true || a.category === 'Irrelevant';
+        const isIrrB = b.isIrrelevant === true || b.category === 'Irrelevant';
+        if (isIrrA && !isIrrB) return 1;
+        if (!isIrrA && isIrrB) return -1;
+
         const timeA = new Date(a.createdAt || 0).getTime();
         const timeB = new Date(b.createdAt || 0).getTime();
         const dayA = Math.floor(timeA / (1000 * 60 * 60 * 24));
@@ -455,8 +581,14 @@ const db = {
       });
     } else {
       // Default sort when not searching: Urgency (High > Medium > Low), then AI rating & score
+      // Irrelevant reports are strictly kept at the very end
       const urgencyWeight = { High: 3, Medium: 2, Low: 1 };
       problems.sort((a, b) => {
+        const isIrrA = a.isIrrelevant === true || a.category === 'Irrelevant';
+        const isIrrB = b.isIrrelevant === true || b.category === 'Irrelevant';
+        if (isIrrA && !isIrrB) return 1;
+        if (!isIrrA && isIrrB) return -1;
+
         const urgA = urgencyWeight[a.urgency] || 1;
         const urgB = urgencyWeight[b.urgency] || 1;
         if (urgB !== urgA) {
@@ -576,7 +708,9 @@ const db = {
       level: data.level || "Village/Ward",
       maxResolutionDays: data.maxResolutionDays || 7,
       escalationStatus: "Normal",
-      rating: 3.5,
+      isIrrelevant: Boolean(data.isIrrelevant),
+      relevanceFlags: data.relevanceFlags || null,
+      rating: data.isIrrelevant ? 1.0 : (data.rating || 3.5),
       duplicateOf: data.duplicateOf || null,
       createdAt: new Date().toISOString()
     };
@@ -722,6 +856,107 @@ const db = {
       }));
 
     return { localMatches, crossStateMatches };
+  },
+
+  // Delete a single problem and its associated solutions
+  deleteProblem(id) {
+    const problems = readJSON(PROBLEMS_FILE, SEED_PROBLEMS);
+    const solutions = readJSON(SOLUTIONS_FILE, SEED_SOLUTIONS);
+
+    const index = problems.findIndex(p => p.id === id);
+    if (index === -1) return null;
+
+    const removed = problems.splice(index, 1)[0];
+    writeJSON(PROBLEMS_FILE, problems);
+
+    // Remove any solutions tied to this problem
+    const remainingSolutions = solutions.filter(s => s.problemId !== id);
+    writeJSON(SOLUTIONS_FILE, remainingSolutions);
+
+    return removed;
+  },
+
+  // Batch delete multiple problems and their solutions
+  deleteProblems(ids = []) {
+    if (!Array.isArray(ids) || ids.length === 0) return { deletedCount: 0 };
+    const problems = readJSON(PROBLEMS_FILE, SEED_PROBLEMS);
+    const solutions = readJSON(SOLUTIONS_FILE, SEED_SOLUTIONS);
+
+    const idSet = new Set(ids);
+    const remainingProblems = problems.filter(p => !idSet.has(p.id));
+    const deletedCount = problems.length - remainingProblems.length;
+    writeJSON(PROBLEMS_FILE, remainingProblems);
+
+    const remainingSolutions = solutions.filter(s => !idSet.has(s.problemId));
+    writeJSON(SOLUTIONS_FILE, remainingSolutions);
+
+    return { deletedCount };
+  },
+
+  // Institutions Management (Super Admin & College Hub)
+  getInstitutions() {
+    return readJSON(INSTITUTIONS_FILE, SEED_INSTITUTIONS);
+  },
+
+  getInstitutionById(id) {
+    const institutions = readJSON(INSTITUTIONS_FILE, SEED_INSTITUTIONS);
+    return institutions.find(i => i.id === id) || null;
+  },
+
+  createInstitution(data) {
+    const institutions = readJSON(INSTITUTIONS_FILE, SEED_INSTITUTIONS);
+    const rawName = (data.name || "Technical Institute").trim();
+    const cleanId = (data.id || rawName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')) || `inst-${Date.now()}`;
+    
+    // Check if code or id already exists
+    const existing = institutions.find(i => i.id === cleanId);
+    const finalId = existing ? `${cleanId}-${Math.floor(100 + Math.random() * 900)}` : cleanId;
+
+    const newInst = {
+      id: finalId,
+      name: rawName,
+      fullName: (data.fullName || rawName).trim(),
+      hubCode: data.hubCode || `HUB-${rawName.slice(0, 4).toUpperCase()}-${Math.floor(10 + Math.random() * 90)}`,
+      state: data.state || "National",
+      district: data.district || "",
+      aisheCode: data.aisheCode || "",
+      nodalOfficer: data.nodalOfficer || "Nodal Officer",
+      nodalEmail: data.nodalEmail || "",
+      nodalPhone: data.nodalPhone || "",
+      domains: Array.isArray(data.domains) 
+        ? data.domains 
+        : (typeof data.domains === 'string' ? data.domains.split(',').map(d => d.trim()).filter(Boolean) : ["Civic Engineering"]),
+      activeTeams: Number(data.activeTeams) || 5,
+      submittedSolutionsCount: 0,
+      avgScore: Number(data.avgScore) || 88.0,
+      nationalRank: Number(data.nationalRank) || (institutions.length + 1),
+      badge: data.badge || "Registered Technical Hub",
+      createdAt: new Date().toISOString()
+    };
+
+    institutions.unshift(newInst);
+    writeJSON(INSTITUTIONS_FILE, institutions);
+    return newInst;
+  },
+
+  updateInstitution(id, data) {
+    const institutions = readJSON(INSTITUTIONS_FILE, SEED_INSTITUTIONS);
+    const inst = institutions.find(i => i.id === id);
+    if (!inst) return null;
+
+    Object.assign(inst, data);
+    writeJSON(INSTITUTIONS_FILE, institutions);
+    return inst;
+  },
+
+  deleteInstitution(id) {
+    const institutions = readJSON(INSTITUTIONS_FILE, SEED_INSTITUTIONS);
+    const index = institutions.findIndex(i => i.id === id);
+    if (index === -1) return null;
+
+    const removed = institutions.splice(index, 1)[0];
+    writeJSON(INSTITUTIONS_FILE, institutions);
+    return removed;
   }
 };
 

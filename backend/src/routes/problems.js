@@ -24,5 +24,11 @@ router.post('/:id/resolve', upload.single('resolutionPhoto'), problemController.
 // Update status / grant pilot sanction
 router.patch('/:id/status', problemController.updateProblemStatus);
 
+// Delete single problem (Authority moderation)
+router.delete('/:id', problemController.deleteProblem);
+
+// Batch delete problems (Authority moderation)
+router.post('/batch-delete', problemController.batchDeleteProblems);
+
 module.exports = router;
 

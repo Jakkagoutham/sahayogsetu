@@ -73,8 +73,13 @@ export default function ProblemBoard({ problems, onSelectProblem, loading }) {
   });
 
   // Sort problems: User requirement: "when i search anything , show the recent uploads first with high rating"
+  // Irrelevant problems flagged by AI are always pinned to the very last / bottom of the board
   const urgencyWeight = { High: 3, Medium: 2, Low: 1 };
   filteredProblems.sort((a, b) => {
+    const aIrrel = a.isIrrelevant || a.category === 'Irrelevant' ? 1 : 0;
+    const bIrrel = b.isIrrelevant || b.category === 'Irrelevant' ? 1 : 0;
+    if (aIrrel !== bIrrel) return aIrrel - bIrrel;
+
     if (search.trim() || sortBy === 'recent_rating') {
       const timeA = new Date(a.createdAt || 0).getTime();
       const timeB = new Date(b.createdAt || 0).getTime();
@@ -430,6 +435,7 @@ export default function ProblemBoard({ problems, onSelectProblem, loading }) {
             const isOverdue = prob.isEscalated;
             const daysLeft = Math.max(0, (prob.maxResolutionDays || 7) - (prob.daysOpen || 0));
             const isSolved = prob.status === 'Solved';
+            const isIrrelevant = prob.isIrrelevant || prob.category === 'Irrelevant';
 
             return (
               <div 
@@ -441,8 +447,8 @@ export default function ProblemBoard({ problems, onSelectProblem, loading }) {
                   flexDirection: 'column',
                   cursor: 'pointer',
                   overflow: 'hidden',
-                  border: isSolved ? '2px solid #86efac' : '1px solid #cbd5e1',
-                  background: '#ffffff'
+                  border: isIrrelevant ? '2px dashed #f87171' : isSolved ? '2px solid #86efac' : '1px solid #cbd5e1',
+                  background: isIrrelevant ? '#fffbfb' : '#ffffff'
                 }}
               >
                 {/* Photo Header */}
@@ -486,7 +492,23 @@ export default function ProblemBoard({ problems, onSelectProblem, loading }) {
 
                   {/* Status / Urgency Badge */}
                   <div style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', gap: '6px' }}>
-                    {prob.pilotSanctioned && (
+                    {isIrrelevant ? (
+                      <div style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        padding: '3px 9px',
+                        borderRadius: '4px',
+                        fontSize: '0.72rem',
+                        fontWeight: '800',
+                        background: '#dc2626',
+                        color: '#ffffff',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                      }}>
+                        <AlertTriangle size={12} color="#ffffff" />
+                        <span>IRRELEVANT</span>
+                      </div>
+                    ) : prob.pilotSanctioned ? (
                       <div style={{
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -501,13 +523,13 @@ export default function ProblemBoard({ problems, onSelectProblem, loading }) {
                       }}>
                         <span>🚀 PILOT SANCTIONED</span>
                       </div>
-                    )}
+                    ) : null}
                     {isSolved ? (
                       <div className="badge-solved" style={{ boxShadow: '0 2px 4px rgba(0,0,0,0.15)' }}>
                         <CheckCircle2 size={13} />
                         <span>SOLVED</span>
                       </div>
-                    ) : (
+                    ) : !isIrrelevant ? (
                       <div style={{
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -523,7 +545,7 @@ export default function ProblemBoard({ problems, onSelectProblem, loading }) {
                         {prob.urgency === 'High' && <div className="urgency-pulse-dot" style={{ backgroundColor: '#ffffff' }} />}
                         <span>{prob.urgency} Urgency</span>
                       </div>
-                    )}
+                    ) : null}
                   </div>
 
                   {/* Ground Proof Geotag Strip */}
@@ -547,11 +569,31 @@ export default function ProblemBoard({ problems, onSelectProblem, loading }) {
 
                 {/* Card Body */}
                 <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                  {/* Irrelevant Warning Banner */}
+                  {isIrrelevant && (
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      background: '#fef2f2',
+                      border: '1px solid #fecaca',
+                      color: '#b91c1c',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '0.72rem',
+                      fontWeight: '700',
+                      marginBottom: '8px'
+                    }}>
+                      <AlertTriangle size={13} color="#dc2626" />
+                      <span>AI Flagged: Irrelevant / Low Civic Priority</span>
+                    </div>
+                  )}
+
                   {/* Title */}
                   <h3 style={{
                     fontSize: '1.02rem',
                     fontWeight: '700',
-                    color: '#0a3977',
+                    color: isIrrelevant ? '#991b1b' : '#0a3977',
                     lineHeight: '1.4',
                     marginBottom: '8px',
                     display: '-webkit-box',
@@ -559,6 +601,7 @@ export default function ProblemBoard({ problems, onSelectProblem, loading }) {
                     WebkitBoxOrient: 'vertical',
                     overflow: 'hidden'
                   }}>
+                    {isIrrelevant && <span style={{ color: '#dc2626', marginRight: '6px' }}>[Irrelevant]</span>}
                     {prob.title}
                   </h3>
 

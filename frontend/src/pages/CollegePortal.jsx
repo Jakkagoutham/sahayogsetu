@@ -1,8 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Building2, Users, Award, CheckCircle2, ChevronRight, 
   MapPin, Clock, ArrowUpRight, Sparkles, Trophy, BookOpen, 
-  FileCheck, ShieldCheck, Plus, Filter, ChevronLeft, Layers 
+  FileCheck, ShieldCheck, Plus, Filter, ChevronLeft, Layers, ArrowLeft 
 } from 'lucide-react';
 import SolutionSubmitModal from '../components/SolutionSubmitModal';
 import SectorFilterBar from '../components/SectorFilterBar';
@@ -80,10 +80,23 @@ const PRELOADED_COLLEGES = [
   }
 ];
 
-export default function CollegePortal({ problems, onSelectProblem, onProblemUpdated }) {
+export default function CollegePortal({ problems, onSelectProblem, onProblemUpdated, onBack }) {
+  const [colleges, setColleges] = useState(PRELOADED_COLLEGES);
   const [selectedCollegeId, setSelectedCollegeId] = useState("iit-roorkee");
   const [activeSubTab, setActiveSubTab] = useState("challenges"); // 'challenges' | 'solutions' | 'leaderboard'
   const [selectedProblemForModal, setSelectedProblemForModal] = useState(null);
+
+  // Fetch dynamic institutions from backend registry
+  useEffect(() => {
+    fetch('/api/institutions')
+      .then(res => res.json())
+      .then(data => {
+        if (data?.institutions && data.institutions.length > 0) {
+          setColleges(data.institutions);
+        }
+      })
+      .catch(err => console.error("Error loading institutions:", err));
+  }, []);
 
   // Filter & Search states (From screenshot)
   const [search, setSearch] = useState('');
@@ -97,7 +110,7 @@ export default function CollegePortal({ problems, onSelectProblem, onProblemUpda
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(6);
 
-  const currentCollege = PRELOADED_COLLEGES.find(c => c.id === selectedCollegeId) || PRELOADED_COLLEGES[0];
+  const currentCollege = colleges.find(c => c.id === selectedCollegeId) || colleges[0] || PRELOADED_COLLEGES[0];
 
   // Filter solutions belonging to this college
   const allSolutions = useMemo(() => {
@@ -182,6 +195,22 @@ export default function CollegePortal({ problems, onSelectProblem, onProblemUpda
 
   return (
     <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '24px 20px' }}>
+      {/* Top Navigation Back Button (Requirement 2) */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
+        <button 
+          onClick={onBack} 
+          className="btn-secondary"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', fontSize: '0.85rem' }}
+        >
+          <ArrowLeft size={16} color="#4ade80" />
+          <span>Back to Citizen Board</span>
+        </button>
+
+        <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+          Portal Mode: <strong style={{ color: '#4ade80' }}>College & University Innovation Hub</strong>
+        </div>
+      </div>
+
       {/* 1. Top Identity Banner: College Hub Profile */}
       <div className="glass-card" style={{ padding: '22px 24px', marginBottom: '20px', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
@@ -225,7 +254,7 @@ export default function CollegePortal({ problems, onSelectProblem, onProblemUpda
               className="input-field"
               style={{ width: 'auto', minWidth: '220px', borderColor: 'rgba(16, 185, 129, 0.4)', background: 'rgba(15, 23, 42, 0.9)', height: '38px', fontSize: '0.82rem' }}
             >
-              {PRELOADED_COLLEGES.map(c => (
+              {colleges.map(c => (
                 <option key={c.id} value={c.id}>
                   {c.name} ({c.state})
                 </option>

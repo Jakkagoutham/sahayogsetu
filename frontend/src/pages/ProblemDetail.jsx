@@ -7,7 +7,7 @@ import {
 import AuthorityContactModal from '../components/AuthorityContactModal';
 import SolutionSubmitModal from '../components/SolutionSubmitModal';
 
-export default function ProblemDetail({ problemId, onBack, onNavigateToProblem }) {
+export default function ProblemDetail({ problemId, onBack, onNavigateToProblem, portalMode = 'citizen' }) {
   const [problem, setProblem] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -150,6 +150,7 @@ export default function ProblemDetail({ problemId, onBack, onNavigateToProblem }
   const daysLeft = Math.max(0, (problem.maxResolutionDays || 7) - (problem.daysOpen || 0));
   const coords = problem.location?.coordinates;
   const mapLink = coords?.lat && coords?.lng ? `https://www.google.com/maps?q=${coords.lat},${coords.lng}` : null;
+  const canSubmitSolution = portalMode === 'college' || portalMode === 'government' || portalMode === 'superadmin';
 
   return (
     <div style={{ maxWidth: '1150px', margin: '0 auto', padding: '28px 20px' }}>
@@ -505,13 +506,27 @@ export default function ProblemDetail({ problemId, onBack, onNavigateToProblem }
           </p>
         </div>
 
-        <button 
-          onClick={() => setIsSubmitSolutionOpen(true)}
-          className="btn-accent"
-        >
-          <Plus size={16} />
-          <span>Submit Solution (Students)</span>
-        </button>
+        {canSubmitSolution ? (
+          <button 
+            onClick={() => setIsSubmitSolutionOpen(true)}
+            className="btn-accent"
+          >
+            <Plus size={16} />
+            <span>Submit Solution (Hub Teams)</span>
+          </button>
+        ) : (
+          <div style={{
+            fontSize: '0.78rem',
+            fontWeight: '600',
+            color: '#64748b',
+            background: '#f8fafc',
+            border: '1px solid #e2e8f0',
+            borderRadius: '6px',
+            padding: '6px 12px'
+          }}>
+            🏛️ Solutions submitted by registered University Hubs
+          </div>
+        )}
       </div>
 
       {/* Solutions List */}
@@ -520,11 +535,15 @@ export default function ProblemDetail({ problemId, onBack, onNavigateToProblem }
           <Sparkles size={36} color="#0a3977" style={{ margin: '0 auto 12px auto' }} />
           <h3 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#0a3977', marginBottom: '6px' }}>No Solutions Submitted Yet</h3>
           <p style={{ color: '#475569', fontSize: '0.85rem', marginBottom: '20px' }}>
-            Be the first university team to propose a technical solution and get evaluated against the SIH 100-pt rubric!
+            {canSubmitSolution 
+              ? "Be the first university engineering team to propose a technical prototype and get evaluated against the SIH 100-pt rubric!"
+              : "Registered engineering institutes & technical hubs evaluate this challenge to submit prototypes."}
           </p>
-          <button onClick={() => setIsSubmitSolutionOpen(true)} className="btn-primary">
-            Submit Solution Now
-          </button>
+          {canSubmitSolution && (
+            <button onClick={() => setIsSubmitSolutionOpen(true)} className="btn-primary">
+              Submit Solution Now
+            </button>
+          )}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
@@ -970,13 +989,15 @@ export default function ProblemDetail({ problemId, onBack, onNavigateToProblem }
         problem={problem}
       />
 
-      {/* Solution Submit Modal */}
-      <SolutionSubmitModal
-        isOpen={isSubmitSolutionOpen}
-        onClose={() => setIsSubmitSolutionOpen(false)}
-        problem={problem}
-        onSolutionSubmitted={handleSolutionSubmitted}
-      />
+      {/* Solution Submit Modal - restricted to non-citizen portals */}
+      {canSubmitSolution && (
+        <SolutionSubmitModal
+          isOpen={isSubmitSolutionOpen}
+          onClose={() => setIsSubmitSolutionOpen(false)}
+          problem={problem}
+          onSolutionSubmitted={handleSolutionSubmitted}
+        />
+      )}
     </div>
   );
 }

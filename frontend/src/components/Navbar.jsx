@@ -32,6 +32,14 @@ export default function Navbar({
           badgeBg: 'rgba(249, 115, 22, 0.15)',
           badgeBorder: 'rgba(249, 115, 22, 0.4)'
         };
+      case 'superadmin':
+        return {
+          title: 'Super Admin Portal',
+          icon: <ShieldCheck size={16} color="#c084fc" />,
+          color: '#a855f7',
+          badgeBg: 'rgba(168, 85, 247, 0.15)',
+          badgeBorder: 'rgba(168, 85, 247, 0.4)'
+        };
       default:
         return {
           title: 'Citizen Portal',
@@ -254,7 +262,8 @@ export default function Navbar({
                   cursor: 'pointer',
                   background: portalMode === 'government' ? 'rgba(249, 115, 22, 0.15)' : 'transparent',
                   color: portalMode === 'government' ? '#fb923c' : '#cbd5e1',
-                  fontSize: '0.82rem'
+                  fontSize: '0.82rem',
+                  marginBottom: '4px'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -265,6 +274,34 @@ export default function Navbar({
                   </div>
                 </div>
                 {portalMode === 'government' && <Check size={14} color="#fb923c" />}
+              </div>
+
+              {/* Option 4: Super Admin Portal */}
+              <div
+                onClick={() => {
+                  setPortalMode('superadmin');
+                  setIsPortalDropdownOpen(false);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '10px 12px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  background: portalMode === 'superadmin' ? 'rgba(168, 85, 247, 0.15)' : 'transparent',
+                  color: portalMode === 'superadmin' ? '#c084fc' : '#cbd5e1',
+                  fontSize: '0.82rem'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <ShieldCheck size={16} color="#c084fc" />
+                  <div>
+                    <div style={{ fontWeight: '700' }}>Super Admin Portal</div>
+                    <div style={{ fontSize: '0.68rem', color: '#64748b' }}>Institutions & system control</div>
+                  </div>
+                </div>
+                {portalMode === 'superadmin' && <Check size={14} color="#c084fc" />}
               </div>
             </div>
           )}
