@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { 
   ShieldCheck, PlusCircle, LayoutGrid, Award, 
-  Building2, ShieldAlert, ChevronDown, Check, User 
+  Building2, ShieldAlert, ChevronDown, Check, User, Globe, Languages 
 } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function Navbar({ 
   activeTab, 
@@ -13,6 +14,8 @@ export default function Navbar({
   stats 
 }) {
   const [isPortalDropdownOpen, setIsPortalDropdownOpen] = useState(false);
+  const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
+  const { t, language, setLanguage, supportedLanguages, currentLangObj } = useLanguage();
 
   const getPortalInfo = () => {
     switch (portalMode) {
@@ -121,7 +124,7 @@ export default function Navbar({
               style={{ padding: '7px 14px', fontSize: '0.8rem' }}
             >
               <LayoutGrid size={15} />
-              <span>Problem Board</span>
+              <span>{t('problemBoard')}</span>
             </button>
 
             <button
@@ -130,7 +133,7 @@ export default function Navbar({
               style={{ padding: '7px 14px', fontSize: '0.8rem' }}
             >
               <PlusCircle size={15} />
-              <span>Report Problem</span>
+              <span>{t('reportProblem')}</span>
             </button>
 
             <button
@@ -140,7 +143,7 @@ export default function Navbar({
               style={{ padding: '7px 12px', fontSize: '0.8rem', color: '#fbbf24', borderColor: 'rgba(251, 191, 36, 0.3)' }}
             >
               <Award size={15} />
-              <span>SIH Matrix</span>
+              <span>{t('sihRubric')}</span>
             </button>
           </nav>
         )}
@@ -303,6 +306,84 @@ export default function Navbar({
                 </div>
                 {portalMode === 'superadmin' && <Check size={14} color="#c084fc" />}
               </div>
+            </div>
+          )}
+        </div>
+
+        {/* Language Selector Dropdown */}
+        <div style={{ position: 'relative' }}>
+          <button
+            type="button"
+            onClick={() => setIsLangDropdownOpen(prev => !prev)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: 'rgba(30, 41, 59, 0.85)',
+              border: '1px solid rgba(56, 189, 248, 0.3)',
+              borderRadius: '12px',
+              padding: '8px 12px',
+              cursor: 'pointer',
+              color: '#f8fafc',
+              fontSize: '0.8rem',
+              fontWeight: '600',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)'
+            }}
+          >
+            <Globe size={16} color="#38bdf8" />
+            <span>{currentLangObj.flag} {currentLangObj.nativeName}</span>
+            <ChevronDown size={14} color="#94a3b8" />
+          </button>
+
+          {isLangDropdownOpen && (
+            <div 
+              className="glass-card"
+              style={{
+                position: 'absolute',
+                top: 'calc(100% + 8px)',
+                right: 0,
+                width: '190px',
+                padding: '6px',
+                zIndex: 200,
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                boxShadow: '0 16px 36px rgba(0, 0, 0, 0.8)',
+                borderRadius: '12px',
+                background: '#111827'
+              }}
+            >
+              <div style={{ padding: '4px 8px 6px', fontSize: '0.68rem', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Select Language
+              </div>
+              {supportedLanguages.map(l => (
+                <div
+                  key={l.code}
+                  onClick={() => {
+                    setLanguage(l.code);
+                    setIsLangDropdownOpen(false);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    background: language === l.code ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
+                    color: language === l.code ? '#38bdf8' : '#cbd5e1',
+                    fontSize: '0.82rem',
+                    marginBottom: '2px',
+                    transition: 'all 0.15s'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>{l.flag}</span>
+                    <span style={{ fontWeight: language === l.code ? '700' : '500' }}>{l.nativeName}</span>
+                    <span style={{ fontSize: '0.7rem', color: '#64748b' }}>({l.name})</span>
+                  </div>
+                  {language === l.code && <Check size={14} color="#38bdf8" />}
+                </div>
+              ))}
             </div>
           )}
         </div>

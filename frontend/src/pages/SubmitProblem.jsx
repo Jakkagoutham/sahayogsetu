@@ -1,6 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { Camera, MapPin, ShieldAlert, Sparkles, CheckCircle, AlertTriangle, ArrowRight, Layers, RefreshCw, XCircle, ArrowLeft } from 'lucide-react';
+import { Camera, MapPin, ShieldAlert, Sparkles, CheckCircle, AlertTriangle, ArrowRight, Layers, RefreshCw, XCircle, ArrowLeft, Mic, Volume2 } from 'lucide-react';
 import EXIF from 'exif-js';
+import { useLanguage } from '../context/LanguageContext';
+import VoiceRecorderModal from '../components/VoiceRecorderModal';
 
 const INDIAN_STATES = [
   "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat",
@@ -11,6 +13,10 @@ const INDIAN_STATES = [
 ];
 
 export default function SubmitProblem({ onProblemCreated, onNavigateBoard }) {
+  const { t } = useLanguage();
+  const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
+  const [voiceFilledNotice, setVoiceFilledNotice] = useState(null);
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -117,6 +123,24 @@ export default function SubmitProblem({ onProblemCreated, onNavigateBoard }) {
     } else {
       setError("Geolocation is not supported by your browser. Please enter coordinates manually.");
     }
+  };
+
+  const handleVoiceDataExtracted = (data) => {
+    setFormData(prev => ({
+      ...prev,
+      title: data.title || prev.title,
+      description: data.description || prev.description,
+      state: data.state || prev.state,
+      district: data.district || prev.district,
+      mandal: data.mandal || prev.mandal,
+      village: data.village || prev.village,
+      areaName: data.areaName || prev.areaName
+    }));
+    setVoiceFilledNotice({
+      language: data.detectedLanguage || 'Regional Language',
+      transcription: data.transcribedText || ''
+    });
+    setError('');
   };
 
   const handleSubmit = async (e) => {
@@ -443,6 +467,112 @@ export default function SubmitProblem({ onProblemCreated, onNavigateBoard }) {
               marginBottom: '20px'
             }}>
               {error}
+            </div>
+          )}
+
+          {/* AI Voice Grievance Intake Hero Card */}
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(238, 242, 255, 0.9) 0%, rgba(245, 243, 255, 0.95) 100%)',
+            border: '1.5px solid #c7d2fe',
+            borderRadius: '10px',
+            padding: '16px 20px',
+            marginBottom: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '14px',
+            boxShadow: '0 4px 14px rgba(99, 102, 241, 0.08)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div style={{
+                width: '46px',
+                height: '46px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 0 16px rgba(124, 58, 237, 0.4)',
+                flexShrink: 0
+              }}>
+                <Mic size={24} color="#ffffff" />
+              </div>
+              <div>
+                <div style={{ fontWeight: '800', color: '#1e1b4b', fontSize: '1.02rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>{t('speakProblemBtn')}</span>
+                  <span style={{ fontSize: '0.68rem', background: '#4338ca', color: '#ffffff', padding: '2px 8px', borderRadius: '12px', fontWeight: '700' }}>
+                    GROQ WHISPER AI
+                  </span>
+                </div>
+                <p style={{ margin: '2px 0 0', fontSize: '0.82rem', color: '#4338ca', lineHeight: '1.4' }}>
+                  {t('speakProblemSubtitle')}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsVoiceModalOpen(true)}
+              style={{
+                background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '10px 20px',
+                fontSize: '0.88rem',
+                fontWeight: '700',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 14px rgba(79, 70, 229, 0.3)',
+                transition: 'all 0.2s',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <Mic size={18} />
+              <span>{t('pressToRecord')}</span>
+            </button>
+          </div>
+
+          {/* Voice Filled Notice Banner */}
+          {voiceFilledNotice && (
+            <div style={{
+              background: '#ecfdf5',
+              border: '1.5px solid #a7f3d0',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              marginBottom: '22px',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '12px',
+              animation: 'fadeIn 0.3s ease-out'
+            }}>
+              <CheckCircle size={20} color="#059669" style={{ marginTop: '2px', flexShrink: 0 }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: '800', color: '#065f46', fontSize: '0.92rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>{t('voiceSuccessTitle')}</span>
+                  <span style={{ fontSize: '0.7rem', background: '#d1fae5', color: '#047857', padding: '1px 8px', borderRadius: '10px' }}>
+                    {voiceFilledNotice.language}
+                  </span>
+                </div>
+                <p style={{ margin: '3px 0 6px', fontSize: '0.82rem', color: '#047857' }}>
+                  {t('voiceSuccessMsg', { lang: voiceFilledNotice.language })}
+                </p>
+                {voiceFilledNotice.transcription && (
+                  <div style={{ fontSize: '0.78rem', color: '#065f46', fontStyle: 'italic', background: 'rgba(255,255,255,0.7)', padding: '6px 10px', borderRadius: '6px' }}>
+                    "{voiceFilledNotice.transcription}"
+                  </div>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setVoiceFilledNotice(null)}
+                style={{ background: 'none', border: 'none', color: '#059669', cursor: 'pointer', padding: '2px' }}
+              >
+                <XCircle size={16} />
+              </button>
             </div>
           )}
 
@@ -778,6 +908,13 @@ export default function SubmitProblem({ onProblemCreated, onNavigateBoard }) {
           </div>
         </form>
       )}
+
+      {/* Groq AI Regional Voice Grievance Intake Modal */}
+      <VoiceRecorderModal
+        isOpen={isVoiceModalOpen}
+        onClose={() => setIsVoiceModalOpen(false)}
+        onVoiceDataExtracted={handleVoiceDataExtracted}
+      />
     </div>
   );
 }

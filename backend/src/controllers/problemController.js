@@ -265,6 +265,48 @@ function batchDeleteProblems(req, res) {
   }
 }
 
+// POST /api/problems/voice-intake
+async function processVoiceIntake(req, res) {
+  try {
+    const voiceService = require('../services/voiceService');
+    const languageHint = req.body.language || req.query.language || '';
+    
+    // Case 1: Audio file upload via multipart/form-data
+    if (req.file) {
+      const result = await voiceService.processVoiceAudio(
+        req.file.buffer,
+        req.file.mimetype || 'audio/webm',
+        languageHint
+      );
+      return res.json(result);
+    }
+    
+    // Case 2: Base64 audio payload in JSON body
+    if (req.body.audioBase64) {
+      const base64Data = req.body.audioBase64.replace(/^data:audio\/\w+;base64,/, '');
+      const audioBuffer = Buffer.from(base64Data, 'base64');
+      const mimeType = req.body.mimeType || 'audio/webm';
+      const result = await voiceService.processVoiceAudio(audioBuffer, mimeType, languageHint);
+      return res.json(result);
+    }
+
+    // Case 3: Raw spoken text (e.g. browser speech-to-text)
+    if (req.body.spokenText) {
+      const result = await voiceService.structureSpokenGrievance(req.body.spokenText);
+      return res.json(result);
+    }
+
+    return res.status(400).json({
+      error: "Audio recording file, audioBase64 string, or spokenText is required."
+    });
+  } catch (err) {
+    console.error("Voice intake error:", err);
+    return res.status(500).json({
+      error: err.message || "Failed to process voice recording."
+    });
+  }
+}
+
 module.exports = {
   createProblem,
   getProblems,
@@ -272,6 +314,7 @@ module.exports = {
   resolveProblem,
   updateProblemStatus,
   deleteProblem,
-  batchDeleteProblems
+  batchDeleteProblems,
+  processVoiceIntake
 };
 

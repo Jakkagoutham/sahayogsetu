@@ -13,6 +13,10 @@ const upload = multer({
 // Problem endpoints
 router.get('/', problemController.getProblems);
 router.post('/', upload.single('photo'), problemController.createProblem);
+
+// Voice-based grievance intake & AI auto-fill
+router.post('/voice-intake', upload.single('audio'), problemController.processVoiceIntake);
+
 router.get('/:id', problemController.getProblemById);
 
 // Submitting solutions to a problem

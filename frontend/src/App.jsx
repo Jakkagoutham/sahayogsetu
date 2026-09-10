@@ -9,8 +9,9 @@ import GovernmentPortal from './pages/GovernmentPortal';
 import SuperAdminPortal from './pages/SuperAdminPortal';
 import GestureNavButton from './components/GestureNavButton';
 import { Award, ShieldCheck } from 'lucide-react';
+import { LanguageProvider } from './context/LanguageContext';
 
-export default function App() {
+function MainApp() {
   // By default, open in Citizen / User's Portal as strictly requested
   const [portalMode, setPortalMode] = useState('citizen'); // 'citizen' | 'college' | 'government'
   const [activeTab, setActiveTab] = useState('board'); // 'board' | 'submit' | 'detail'
@@ -294,5 +295,13 @@ export default function App() {
         </div>
       </footer>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <LanguageProvider>
+      <MainApp />
+    </LanguageProvider>
   );
 }
