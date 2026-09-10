@@ -1,0 +1,14 @@
+{
+  "name": "sahayog-setu",
+  "version": "1.0.0",
+  "description": "Crowdsourced Societal Problem-Solving Platform for Smart India Hackathon",
+  "scripts": {
+    "dev:backend": "node backend/server.js",
+    "dev:frontend": "npm.cmd --prefix frontend run dev",
+    "dev": "concurrently --kill-others-on-fail -n \"BACKEND,FRONTEND\" -c \"blue,green\" \"node backend/server.js\" \"npm.cmd --prefix frontend run dev\"",
+    "start": "npm.cmd run dev"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
